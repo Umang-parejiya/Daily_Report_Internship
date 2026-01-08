@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day-4 Intern_work</title>
+    <link rel="stylesheet" href="day-4.css">
+</head>
+
+<body>
+    <h1>Day-4 Intern_work Practice</h1>
+
+    <h3>Single-line text input</h3>
+
+    <form>
+        <label for="name">Name:</label>
+        <input type="text" id="name" placeholder="Enter your name" required>
+    </form>
+
+    <h3>Phone Number Auto-Limit (10 Digits)</h3>
+    <form>
+        <input type="tel" id="phone" maxlength="10" placeholder="10-digit mobile number" required>
+    </form>
+
+    <h3>Password Strength Indicator</h3>
+    <form action="">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter your password">
+        <small id="strength"></small>
+    </form>
+
+    <h3>Select only one option</h3>
+    <form>
+        <label>Gender:</label><br>
+        <input type="radio" name="gender" value="male" required> Male<br>
+        <input type="radio" name="gender" value="female"> Female<br>
+    </form>
+    
+    <h3>Submits the form</h3>
+    <form>
+        <input type="submit" value="Submit Form">
+    </form>
+
+    <h3>Clickable button</h3>
+    <form>
+        <input type="button" onclick="alert('Hello World!')" value="click me">
+    </form>
+    
+    <h3>Dropdown manu</h3>
+    <form>
+        <label for="course">Course:</label><br>
+        <select id="course" required>
+            <option>Select Course</option>
+            <option selected>Web Development</option>
+            <option>Java</option>
+            <option>Data Science</option>
+        </select>
+    </form>
+    <h3>Multi-line input</h3>
+    <form>
+        <label for="address">Address:</label><br>
+        <textarea id="address" rows="4" cols="30" placeholder="Enter address"></textarea>
+    </form>
+    <br>
+    <br>
+    <HR>
+    </HR>
+
+    <h2>Registration Form Creation </h2>
+
+    <div class="container">
+        <div class="header">
+            <h1>Internship Registration</h1>
+            <p>please fill out the form carefully</p>
+        </div>
+
+        <form action="#" target="_top" class="form" method="post">
+
+            <!-- TEXT INPUT -->
+            <div class="form-group">
+                <label for="fullname">Full Name</label>
+                <input type="text" name="fullname" id="fullname" placeholder="Enter your name" required maxlength="50">
+            </div>
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" placeholder="example@gmail.com"
+                    pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+.\[a-z]{2,}$">
+            </div>
+
+            <!-- RADIO BUTTON -->
+            <div class="form-group">
+                <label for="Gender">Gender</label>
+                <div class="option">
+                    <input type="radio" name="gender" id="male" required>
+                    <label for="male">Male</label>
+
+                    <input type="radio" name="gender" id="female">
+                    <label for="female">Female</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="dob">Date of Birth</label>
+                <input type="date" id="dob" name="dob" required>
+            </div>
+
+            <!-- CHECKBOX -->
+
+            <div class="form-group" id="label">
+                <label for="Skills">Skills</label>
+                <div class="option">
+                    <input type="checkbox" id="html" value="html">
+                    <label for="html">HTML</label>
+
+                    <input type="checkbox" id="css" value="css">
+                    <label for="css">CSS</label>
+
+                    <input type="checkbox" id="js" value="js">
+                    <label for="js">JavaScript</label>
+                </div>
+            </div>
+
+            <!-- SELECT DROPDOWN -->
+            <div class="form-group">
+                <label for="domain">Internship Domain</label>
+                <select id="domain" required>
+                    <option value="">-- Select Domain --</option>
+                    <option>Web Development</option>
+                    <option>Java Development</option>
+                    <option>MERN Stack</option>
+                    <option>Data Science</option>
+                </select>
+            </div>
+
+            <!-- TEXTAREA -->
+            <div class="form-group">
+                <label for="address">Address</label>
+                <textarea id="address" rows="4" placeholder="Enter your address"></textarea>
+            </div>
+
+            <!-- BUTTON -->
+            <div class="form-actions">
+                <input type="submit" value="Register">
+                <input type="button" value="Help">
+            </div>
+
+        </form>
+
+    </div>
+
+
+
+</body>
+
+</html>

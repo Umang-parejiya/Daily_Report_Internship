@@ -1,0 +1,105 @@
+    .container {
+        max-width: 600px;
+        margin: 40px auto;
+        background: #ffffff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        background-color: #f2f6ff;
+        color: #333;
+        box-sizing: border-box;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+
+    /* HEADER */
+    .header {
+        text-align: center;
+        margin-bottom: 25px;
+    }
+
+    .header h1 {
+        margin-bottom: 10px;
+    }
+
+    /* FORM */
+    .form-group {
+        margin-bottom: 18px;
+    }
+
+    label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    select,
+    textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid black;
+        border-radius: 5px;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+        outline: none;
+        border-color: #007bff;
+    }
+
+    input[type="date"] {
+        outline: none;
+        border-color: #007bff;
+        border-radius: 5px;
+        border: 1px solid black;
+        padding: 5px;
+    }
+
+    /* RADIO & CHECKBOX */
+    .option {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        width: 100%;
+    }
+
+    .option label {
+        margin-top: 10px;
+    }
+
+    /* BUTTON */
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    input[type="submit"],
+    input[type="button"] {
+        padding: 10px 18px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    input[type="submit"] {
+        background: #007bff;
+        color: white;
+    }
+
+    input[type="button"] {
+        background: #6c757d;
+        color: white;
+    }
+
+    input[type="submit"]:hover {
+        background: #0056b3;
+    }
+
+
+    h2 {
+        text-align: center;
+    }
