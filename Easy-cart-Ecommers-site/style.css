@@ -2,7 +2,7 @@
    MAIN CSS FILE - Imports all modular CSS files
    ========================================================= */
 
-/* Base styles - Reset, variables, typography */
+/* Base styles - Reset, typography */
 @import url('css/base.css');
 
 /* Layout styles - Header, footer, navigation */

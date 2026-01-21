@@ -45,6 +45,11 @@
   .auth-container {
     margin: 2rem auto;
   }
+
+  .brand-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
 }
 
 /* Small screens (640px and below) */
@@ -101,6 +106,20 @@
     margin: 1rem auto;
     padding: 0 1rem;
   }
+
+  .brand-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .brand-card {
+    padding: 1rem;
+  }
+
+  .brand-card img {
+    width: 60px;
+    height: 60px;
+  }
 }
 
 /* =========================================================
@@ -118,7 +137,7 @@
 .btn:focus-visible,
 .form-input:focus-visible,
 .nav-link:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid #ff6b35;
   outline-offset: 2px;
 }
 
