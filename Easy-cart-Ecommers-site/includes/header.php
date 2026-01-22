@@ -10,7 +10,7 @@
     <header>
         <div class="container">
             <div class="header-content">
-                <a href="index.php" class="logo">Easy-Cart</a>
+                <a href="index.php" class="logo">EasyCart</a>
                 <nav>
                     <ul class="nav-links">
                         <li><a href="index.php" class="nav-link <?php echo ($current_page == 'home') ? 'active' : ''; ?>">Home</a></li>
