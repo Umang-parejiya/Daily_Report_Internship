@@ -1,147 +1,231 @@
 <?php
-// Shopping Cart Page - cart.php
-session_start(); // Start session
-
+session_start();
 $current_page = 'cart';
-$page_title = 'Easy-Cart - Shopping Cart';
+$page_title = 'Easy-Cart - My Cart';
 
-// Load products data
 require_once 'data/products.php';
 
-// Initialize cart if not exists
-if (!isset($_SESSION['cart'])) {
-    $_SESSION['cart'] = [];
-}
+// --- HANDLE CART ACTIONS ---
 
-// Handle remove from cart
+// 1. Remove Item
 if (isset($_GET['remove'])) {
     $remove_id = intval($_GET['remove']);
-    // Find and remove the first occurrence of this product ID
-    $key = array_search($remove_id, $_SESSION['cart']);
-    if ($key !== false) {
-        unset($_SESSION['cart'][$key]);
-        $_SESSION['cart'] = array_values($_SESSION['cart']); // Re-index array
+    // Remove all instances of this ID
+    if (isset($_SESSION['cart'])) {
+        $_SESSION['cart'] = array_filter($_SESSION['cart'], function($id) use ($remove_id) {
+            return $id != $remove_id;
+        });
+        $_SESSION['cart'] = array_values($_SESSION['cart']); // Re-index
     }
     header('Location: cart.php');
     exit;
 }
 
-// Get cart items with quantities
-$cart_items = [];
-$cart_product_ids = array_count_values($_SESSION['cart']);
+// 2. Update Quantity (Add/Subtract)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_POST['product_id'])) {
+    $action = $_POST['action'];
+    $pid = intval($_POST['product_id']);
+    
+    if ($action === 'increase') {
+        $_SESSION['cart'][] = $pid;
+    } elseif ($action === 'decrease') {
+        // Remove ONE instance of this ID
+        $key = array_search($pid, $_SESSION['cart']);
+        if ($key !== false) {
+            unset($_SESSION['cart'][$key]);
+            $_SESSION['cart'] = array_values($_SESSION['cart']); 
+        }
+    }
+    // Redirect to prevent form resubmission
+    header('Location: cart.php');
+    exit;
+}
 
-foreach ($cart_product_ids as $product_id => $quantity) {
+// --- PREPARE DATA FOR DISPLAY ---
+
+// Initialize cart array if not exists
+if (!isset($_SESSION['cart'])) {
+    $_SESSION['cart'] = [];
+}
+
+// Count quantities: [1 => 2, 4 => 1] (Product ID => Qty)
+$cart_counts = array_count_values($_SESSION['cart']);
+
+// Build rich item list
+$cart_items = [];
+$subtotal = 0;
+
+foreach ($cart_counts as $product_id => $quantity) {
     // Find product details
-    foreach ($products as $product) {
-        if ($product['id'] === $product_id) {
+    foreach ($products as $p) {
+        if ($p['id'] === $product_id) {
+            $line_total = $p['price'] * $quantity;
+            $subtotal += $line_total;
+            
             $cart_items[] = [
-                'product' => $product,
-                'quantity' => $quantity,
-                'subtotal' => $product['price'] * $quantity
+                'id' => $p['id'],
+                'name' => $p['name'],
+                'price' => $p['price'],
+                'image' => $p['image'],
+                'brand' => $p['brand'],
+                'qty' => $quantity,
+                'total' => $line_total
             ];
-            break;
+            break; 
         }
     }
 }
 
-// Calculate totals
-$subtotal = 0;
-foreach ($cart_items as $item) {
-    $subtotal += $item['subtotal'];
-}
-// Shipping will be selected at checkout
+// Total (shipping calculated at checkout)
 $total = $subtotal;
 
-// Include header
 include 'includes/header.php';
 ?>
 
 <div class="container">
     <section class="section">
-        <div class="section-header">
-            <h1 class="section-title">Shopping Cart</h1>
-            <p class="section-subtitle">
-                <?php 
-                $item_count = count($_SESSION['cart']);
-                echo $item_count > 0 ? "You have $item_count item(s) in your cart" : "Your cart is empty";
-                ?>
-            </p>
-        </div>
-
+        
         <?php if (count($cart_items) > 0): ?>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Product Name</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Subtotal</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($cart_items as $item): ?>
-                            <tr>
-                                <td>
-                                    <a href="pdp.php?id=<?php echo $item['product']['id']; ?>" 
-                                       style="color: var(--accent);">
-                                        <?php echo htmlspecialchars($item['product']['name']); ?>
-                                    </a>
-                                </td>
-                                <td>₹<?php echo number_format($item['product']['price']); ?></td>
-                                <td><?php echo $item['quantity']; ?></td>
-                                <td>₹<?php echo number_format($item['subtotal']); ?></td>
-                                <td>
-                                    <a href="cart.php?remove=<?php echo $item['product']['id']; ?>" 
-                                       class="btn btn-ghost" 
-                                       style="padding: 0.5rem 1rem; font-size: 0.875rem;"
-                                       onclick="return confirm('Remove this item from cart?');">
-                                        Remove
-                                    </a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            
+            <div class="section-header">
+                <h1 class="section-title">Your Shopping Cart</h1>
+                <p class="section-subtitle">
+                    You have <?php echo count($_SESSION['cart']); ?> item(s) in your cart
+                </p>
             </div>
 
-            <div class="card price-summary">
-                <h3>Price Summary</h3>
-                <div class="table-container">
-                    <table>
-                        <tbody>
-                            <tr>
-                                <td>Subtotal</td>
-                                <td>₹<?php echo number_format($subtotal); ?></td>
-                            </tr>
-                            <tr>
-                                <td>Shipping</td>
-                                <td><em>Calculated at checkout</em></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Subtotal</strong></td>
-                                <td><strong>₹<?php echo number_format($total); ?></strong></td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <!-- Progress Indicator -->
+            <div class="checkout-progress">
+                <div class="step active">
+                    <div class="step-number">1</div>
+                    <span>Cart</span>
                 </div>
-                <a href="checkout.php" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-                    Proceed to Checkout
-                </a>
-                <a href="plp.php" class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;">
-                    Continue Shopping
-                </a>
+                <div class="step-divider"></div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <span>Information</span>
+                </div>
+                <div class="step-divider"></div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <span>Complete</span>
+                </div>
             </div>
+
+            <div class="cart-layout">
+                <!-- Left Column: Product List -->
+                <div class="cart-items">
+                    
+                    <?php foreach ($cart_items as $item): ?>
+                    <div class="cart-item-card">
+                        <!-- Product Image -->
+                        <img src="<?php echo htmlspecialchars($item['image']); ?>" 
+                             alt="<?php echo htmlspecialchars($item['name']); ?>" 
+                             class="cart-item-image">
+                        
+                        <!-- Details -->
+                        <div class="cart-item-details">
+                            <div>
+                                <div class="cart-item-header">
+                                    <h3 class="cart-item-title">
+                                        <a href="pdp.php?id=<?php echo $item['id']; ?>" style="color: inherit; text-decoration: none;">
+                                            <?php echo htmlspecialchars($item['name']); ?>
+                                        </a>
+                                    </h3>
+                                    <div class="cart-item-price">
+                                        ₹<?php echo number_format($item['price']); ?>
+                                    </div>
+                                </div>
+                                <div class="cart-item-brand">
+                                    Brand: <?php echo htmlspecialchars($item['brand']); ?>
+                                </div>
+                            </div>
+
+                            <div class="cart-item-actions">
+                                <!-- Interactive Qty Control -->
+                                <form method="POST" class="qty-control">
+                                    <input type="hidden" name="product_id" value="<?php echo $item['id']; ?>">
+                                    
+                                    <button type="submit" name="action" value="decrease" class="qty-btn" title="Decrease">
+                                        −
+                                    </button>
+                                    
+                                    <div class="qty-display"><?php echo $item['qty']; ?></div>
+                                    
+                                    <button type="submit" name="action" value="increase" class="qty-btn" title="Increase">
+                                        +
+                                    </button>
+                                </form>
+
+                                <!-- Remove Button -->
+                                <a href="cart.php?remove=<?php echo $item['id']; ?>" 
+                                   class="remove-btn" 
+                                   onclick="return confirm('Remove this item from cart?');">
+                                    🗑 Remove
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+
+                    <div style="margin-top: 1rem;">
+                        <a href="plp.php" class="btn btn-secondary">
+                            ← Continue Shopping
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right Column: Summary Box -->
+                <div class="cart-summary checkout-sidebar">
+                    <div class="card">
+                        <h3 class="mb-3">Order Summary</h3>
+                        
+                        <div class="table-container" style="border: none; background: transparent;">
+                            <table style="margin-bottom: 1rem;">
+                                <tbody>
+                                    <tr>
+                                        <td style="padding: 0.5rem 0; border: none; color: var(--text-secondary);">Subtotal</td>
+                                        <td style="padding: 0.5rem 0; border: none; text-align: right; font-weight: 600;">
+                                            ₹<?php echo number_format($subtotal); ?>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 0.5rem 0; border: none; color: var(--text-secondary);">Delivery Chagres</td>
+                                        <td style="padding: 0.5rem 0; border: none; text-align: right; font-style: italic; color: var(--text-secondary);">
+                                            Calculated at checkout
+                                        </td>
+                                    </tr>
+                                    <tr style="border-top: 2px solid var(--border);">
+                                        <td style="padding: 1rem 0; border: none;"><strong style="font-size: 1.1rem;">Total Est.</strong></td>
+                                        <td style="padding: 1rem 0; border: none; text-align: right;"><strong style="font-size: 1.1rem; color: var(--accent);">₹<?php echo number_format($total); ?></strong></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <a href="checkout.php" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 1rem;">
+                            Proceed to Checkout →
+                        </a>
+                        
+                        <p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-top: 1rem;">
+                            🔒 Secure Checkout
+                        </p>
+                    </div>
+                </div>
+            </div>
+
         <?php else: ?>
-            <div class="card" style="text-align: center; padding: 3rem;">
-                <h3>Your cart is empty</h3>
-                <p>Start adding products to your cart!</p>
-                <a href="plp.php" class="btn btn-primary" style="margin-top: 1rem;">
-                    Browse Products
-                </a>
+            
+            <!-- EMTPY STATE -->
+            <div class="empty-cart-container">
+                <span class="empty-icon">🛒</span>
+                <h2 style="margin-bottom: 1rem;">Your cart is empty</h2>
+                <p style="margin-bottom: 2rem;">Looks like you haven't added anything to your cart yet.</p>
+                <a href="plp.php" class="btn btn-primary">Start Shopping</a>
             </div>
+
         <?php endif; ?>
+
     </section>
 </div>
 

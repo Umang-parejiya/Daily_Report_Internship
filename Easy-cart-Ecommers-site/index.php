@@ -16,14 +16,42 @@ include 'includes/header.php';
 ?>
 
 <div class="container">
-    <section class="section">
-        <div class="section-header">
-            <h1 class="section-title">Welcome to Easy-Cart</h1>
-            <p class="section-subtitle">Your one-stop shop for all your shopping needs. Discover amazing products at great prices!</p>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1 class="hero-title">Welcome to <span class="hero-accent">Easy-Cart</span></h1>
+                <p class="hero-description">Your one-stop shop for all your shopping needs. Discover amazing products at great prices with fast delivery and exceptional service.</p>
+                <div class="hero-actions">
+                    <a href="#featured-products" class="btn btn-primary hero-cta">Shop Now</a>
+                    <a href="#categories" class="btn btn-secondary hero-secondary">Explore Categories</a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">10K+</div>
+                        <div class="stat-label">Products</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">50K+</div>
+                        <div class="stat-label">Happy Customers</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">24/7</div>
+                        <div class="stat-label">Support</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="hero-background">
+            <div class="hero-shape shape-1"></div>
+            <div class="hero-shape shape-2"></div>
+            <div class="hero-shape shape-3"></div>
         </div>
     </section>
 
-    <section class="section">
+    <section id="featured-products" class="section">
         <div class="section-header">
             <h2 class="section-title">Featured Products</h2>
             <p class="section-subtitle">Handpicked items just for you</p>
@@ -47,7 +75,7 @@ include 'includes/header.php';
         </div>
     </section>
 
-    <section class="section">
+    <section id="categories" class="section">
         <div class="section-header">
             <h2 class="section-title">Popular Categories</h2>
             <p class="section-subtitle">Explore our wide range of categories</p>
