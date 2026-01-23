@@ -50,5 +50,10 @@
             </div>
         </div>
     </footer>
+    <!-- Phase 3 JavaScript Enhancements -->
+    <script src="js/validation.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/product.js"></script>
+    <script src="js/checkout.js"></script>
 </body>
 </html>

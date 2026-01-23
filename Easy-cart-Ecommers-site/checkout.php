@@ -150,8 +150,7 @@ include 'includes/header.php';
                             <?php foreach ($shipping_options as $key => $option): ?>
                             <label class="selection-card">
                                 <input type="radio" name="shipping_method" value="<?php echo $key; ?>" 
-                                       <?php echo ($selected_shipping === $key) ? 'checked' : ''; ?>
-                                       onchange="document.getElementById('shippingForm').submit();">
+                                       <?php echo ($selected_shipping === $key) ? 'checked' : ''; ?>>
                                 <div class="card-content">
                                     <div class="card-icon"><?php echo $option['icon']; ?></div>
                                     <div class="card-title"><?php echo $option['name']; ?></div>
@@ -213,7 +212,7 @@ include 'includes/header.php';
                     </p>
                 </div>
                 
-                <button class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem;" onclick="placeOrder()">
+                <button class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem;">
                     Complete Order
                 </button>
             </div>

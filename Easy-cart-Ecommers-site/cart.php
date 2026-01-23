@@ -132,7 +132,7 @@ include 'includes/header.php';
                                             <?php echo htmlspecialchars($item['name']); ?>
                                         </a>
                                     </h3>
-                                    <div class="cart-item-price">
+                                    <div class="cart-item-price" data-price="<?php echo $item['price']; ?>">
                                         ₹<?php echo number_format($item['price']); ?>
                                     </div>
                                 </div>
@@ -159,8 +159,7 @@ include 'includes/header.php';
 
                                 <!-- Remove Button -->
                                 <a href="cart.php?remove=<?php echo $item['id']; ?>" 
-                                   class="remove-btn" 
-                                   onclick="return confirm('Remove this item from cart?');">
+                                   class="remove-btn">
                                     🗑 Remove
                                 </a>
                             </div>
