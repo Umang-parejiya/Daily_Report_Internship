@@ -110,6 +110,51 @@ $products = [
         'brand' => 'Generic',
         'description' => 'Large gaming mouse pad with smooth surface and non-slip rubber base.',
         'image' => 'images/Gaming Mouse Pad.jfif'
+    ],
+    [
+        'id' => 13,
+        'name' => 'Nike Air Max',
+        'price' => 5000,
+        'category' => 'Footwear',
+        'brand' => 'Nike',
+        'description' => 'Classic Nike sneakers offering reliable comfort and iconic style for everyday wear.',
+        'image' => 'images/Nikeshoes.jfif'
+    ],
+    [
+        'id' => 14,
+        'name' => 'Puma Running Shoes',
+        'price' => 4500,
+        'category' => 'Footwear',
+        'brand' => 'Puma',
+        'description' => 'High-performance running shoes from Puma with superior cushioning and grip.',
+        'image' => 'images/pumashoes.jfif'
+    ],
+    [
+        'id' => 15,
+        'name' => 'Adidas Samba',
+        'price' => 5500,
+        'category' => 'Footwear',
+        'brand' => 'Adidas',
+        'description' => 'The authentic Adidas Samba shoes, featuring a timeless design and premium materials.',
+        'image' => 'images/adidas samba_shoes2.jfif'
+    ],
+    [
+        'id' => 16,
+        'name' => 'Samsung S25 Ultra',
+        'price' => 125000,
+        'category' => 'Electronics',
+        'brand' => 'Samsung',
+        'description' => 'The ultimate Galaxy smartphone with pro-grade camera, powerful performance, and S Pen.',
+        'image' => 'images/samsungS25_ultra.jfif'
+    ],
+    [
+        'id' => 17,
+        'name' => 'Adidas Sportswear Set',
+        'price' => 3000,
+        'category' => 'Clothing',
+        'brand' => 'Adidas',
+        'description' => 'Comfortable and stylish activewear set from Adidas, perfect for workouts or casual wear.',
+        'image' => 'images/adidas_clothes.jfif'
     ]
 ];
 ?>
