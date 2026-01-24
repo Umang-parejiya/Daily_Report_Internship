@@ -22,7 +22,7 @@ foreach ($cart_product_ids as $product_id => $quantity) {
     foreach ($products as $product) {
         if ($product['id'] === $product_id) {
             $cart_items[] = [
-                'product' => $product,
+                'product' => array_merge($product, ['image' => $product['image']]),
                 'quantity' => $quantity,
                 'subtotal' => $product['price'] * $quantity
             ];
@@ -269,48 +269,6 @@ include 'includes/header.php';
     </section>
 </div>
 
-<script>
-    // Add change event to hide error when payment method is selected
-    document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            document.getElementById('payment-error').style.display = 'none';
-        });
-    });
 
-    function placeOrder() {
-        // Check if payment method is selected
-        const paymentMethod = document.querySelector('input[name="payment_method"]:checked');
-        
-        if (!paymentMethod) {
-            document.getElementById('payment-error').style.display = 'block';
-            document.querySelector('.payment-option, .selection-grid').scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'center' 
-            });
-            return false;
-        }
-        
-        const paymentNames = {
-            'cod': 'Cash on Delivery',
-            'card': 'Credit/Debit Card',
-            'upi': 'UPI',
-            'netbanking': 'Net Banking'
-        };
-        
-        const selectedPayment = paymentNames[paymentMethod.value];
-        
-        // Demo User Feedback
-        alert(
-            '✅ Order Placed Successfully!\n\n' +
-            'Order Total: ₹<?php echo number_format($total); ?>\n' +
-            'Shipping: <?php echo $shipping_options[$selected_shipping]['name']; ?>\n' +
-            'Payment Method: ' + selectedPayment + '\n\n' +
-            'Thank you for shopping with Easy-Cart!'
-        );
-        
-        // Redirect to home (simulated)
-        // window.location.href = 'index.php';
-    }
-</script>
 
 <?php include 'includes/footer.php'; ?>

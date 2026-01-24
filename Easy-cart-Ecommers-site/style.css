@@ -497,13 +497,68 @@ tbody tr:last-child td {
 
 .product-gallery {
   position: sticky;
-  top: 2rem;
+  top: 6rem;
 }
 
-.product-gallery img {
+.main-image-container {
   width: 100%;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  aspect-ratio: 1;
+  background: #f8fafc;
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid #f1f5f9;
+}
+
+.main-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: opacity 0.3s ease, transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.product-gallery:hover .main-image {
+  transform: scale(1.05);
+}
+
+.thumbnails {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+}
+
+.thumb-item {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  background: #f8fafc;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumb-item:hover {
+  border-color: #ff6b35;
+  transform: translateY(-2px);
+}
+
+.thumb-item.active {
+  border-color: #ff6b35;
+  background: #fff2ed;
+}
+
+.thumb-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .product-content h1 {

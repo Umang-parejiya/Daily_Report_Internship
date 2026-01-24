@@ -15,44 +15,64 @@ document.addEventListener('DOMContentLoaded', function () {
     const formatPrice = (num) => '₹' + num.toLocaleString('en-IN');
 
     qtyForms.forEach(form => {
-        const decreaseBtn = form.querySelector('button[value="decrease"]');
-        const increaseBtn = form.querySelector('button[value="increase"]');
+        const product_id = form.querySelector('input[name="product_id"]').value;
         const display = form.querySelector('.qty-display');
 
-        decreaseBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            let currentQty = parseInt(display.textContent, 10);
-            if (currentQty > 1) {
-                currentQty--;
-                display.textContent = currentQty;
-                updateTotals();
-            }
-        });
+        form.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const action = this.value; // increase or decrease
 
-        increaseBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            let currentQty = parseInt(display.textContent, 10);
-            currentQty++;
-            display.textContent = currentQty;
-            updateTotals();
+                // Optimistic UI update or wait for server?
+                // Server is safer to ensure sync
+
+                const formData = new FormData();
+                formData.append('action', action);
+                formData.append('product_id', product_id);
+                formData.append('ajax_update', '1');
+
+                fetch('cart.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (data.removed) {
+                                form.closest('.cart-item-card').remove();
+                                // If empty, reload to show empty state
+                                if (document.querySelectorAll('.cart-item-card').length === 0) {
+                                    location.reload();
+                                }
+                            } else {
+                                display.textContent = data.newQty;
+                            }
+
+                            // Update globals
+                            const summaryTable = document.querySelector('.table-container table');
+                            if (summaryTable) {
+                                // Subtotal
+                                summaryTable.rows[0].cells[1].textContent = `₹${data.newSubtotal}`;
+                                // Total (assuming row 2 or 3)
+                                const totalRow = summaryTable.rows[summaryTable.rows.length - 1]; // Last row usually
+                                totalRow.cells[1].innerHTML = `<strong style="font-size: 1.1rem; color: var(--accent);">₹${data.newTotal}</strong>`;
+                            }
+                        }
+                    })
+                    .catch(err => console.error('Cart update failed:', err));
+            });
         });
     });
 
     // Handle Remove Button
+    // Handle Remove Button
     const removeButtons = document.querySelectorAll('.remove-btn');
     removeButtons.forEach(btn => {
         btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            if (confirm('Remove this item from cart? (Visual only)')) {
-                const card = this.closest('.cart-item-card');
-                card.remove();
-                updateTotals();
-
-                // Show empty state if no items left
-                if (document.querySelectorAll('.cart-item-card').length === 0) {
-                    location.reload();
-                }
+            if (!confirm('Are you sure you want to remove this item?')) {
+                e.preventDefault();
             }
+            // Allow default navigation to cart.php?remove=ID
         });
     });
 

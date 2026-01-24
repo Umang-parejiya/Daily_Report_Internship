@@ -4,15 +4,15 @@
  * Follows modern JavaScript practices and avoids inline scripts.
  */
 
-document.addEventListener('DOMContentLoaded', function() {
-    
+document.addEventListener('DOMContentLoaded', function () {
+
     // --- 1. LOGIN FORM VALIDATION ---
     const loginForm = document.querySelector('.auth-form');
     // Ensure we are on the login page by checking for unique elements if class is reused
     const isLoginPage = document.querySelector('h2.auth-title') && document.querySelector('h2.auth-title').textContent.includes('Sign In');
-    
+
     if (loginForm && isLoginPage) {
-        loginForm.addEventListener('submit', function(e) {
+        loginForm.addEventListener('submit', function (e) {
             const emailInput = loginForm.querySelector('input[type="email"]');
             const passwordInput = loginForm.querySelector('input[type="password"]');
             let isValid = true;
@@ -28,14 +28,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Remove existing error if any
                 const existing = parent.querySelector('.error-message');
                 if (existing) existing.remove();
-                
+
                 const error = document.createElement('small');
                 error.className = 'error-message';
                 error.style.color = '#ef4444';
                 error.style.fontSize = '0.875rem';
                 error.style.marginTop = '0.25rem';
                 error.textContent = msg;
-                
+
                 input.classList.add('error');
                 parent.appendChild(error);
             };
@@ -68,10 +68,39 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!isValid) {
                 e.preventDefault();
             } else {
-                // If valid, let it submit (or handle via AJAX if that was the plan, but requirements say "data logic remains PHP")
-                // The original code halted with "Loggin successful" alert. We will remove that stopping block so PHP can handle it,
-                // or if this is a mockup, show success. 
-                // Since user didn't ask to CHANGE authentication flow to AJAX, we just validate.
+                // AJAX Login
+                e.preventDefault();
+                const submitBtn = loginForm.querySelector('button[type="submit"]');
+                const originalText = submitBtn.textContent;
+                submitBtn.textContent = 'Signing In...';
+                submitBtn.disabled = true;
+
+                const formData = new FormData();
+                formData.append('email', emailInput.value);
+                formData.append('password', passwordInput.value);
+                formData.append('ajax_login', '1');
+
+                fetch('login.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Redirect to home or intended page
+                            window.location.href = 'index.php';
+                        } else {
+                            showError(passwordInput, data.message || 'Invalid email or password');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Login error:', err);
+                        showError(passwordInput, 'An error occurred. Please try again.');
+                    })
+                    .finally(() => {
+                        submitBtn.textContent = originalText;
+                        submitBtn.disabled = false;
+                    });
             }
         });
     }
@@ -82,9 +111,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const isSignupPage = document.querySelector('h2.auth-title') && document.querySelector('h2.auth-title').textContent.includes('Create Account');
 
     if (signupForm && isSignupPage) {
-        signupForm.addEventListener('submit', function(e) {
+        signupForm.addEventListener('submit', function (e) {
             let isValid = true;
-            
+
             const nameInputs = signupForm.querySelectorAll('input[type="text"]');
             const emailInput = signupForm.querySelector('input[type="email"]');
             const passwordInput = signupForm.querySelector('input[placeholder*="strong password"]');
@@ -92,13 +121,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const termsBox = signupForm.querySelector('input[type="checkbox"]');
 
             const showError = (input, msg) => {
-                 // Adjust for different DOM structure in signup if needed, but looks similar
-                 // form-group -> input-wrapper -> input. 
-                 // Actually logic above used parentElement.parentElement which is form-group.
+                // Adjust for different DOM structure in signup if needed, but looks similar
+                // form-group -> input-wrapper -> input. 
+                // Actually logic above used parentElement.parentElement which is form-group.
                 const parent = input.closest('.form-group') || input.parentElement;
                 const existing = parent.querySelector('.error-message');
                 if (existing) existing.remove();
-                
+
                 const error = document.createElement('small');
                 error.className = 'error-message';
                 error.style.color = '#ef4444';
@@ -106,7 +135,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 error.style.marginTop = '0.25rem';
                 error.style.display = 'block';
                 error.textContent = msg;
-                
+
                 input.classList.add('error');
                 parent.appendChild(error);
             };
@@ -156,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Terms
             // Usually terms have a specific label structure
             const termsLabel = termsBox.closest('.checkbox-label');
-            if(!termsBox.checked) {
+            if (!termsBox.checked) {
                 termsLabel.style.color = '#ef4444';
                 isValid = false;
             } else {
@@ -165,6 +194,42 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!isValid) {
                 e.preventDefault();
+            } else {
+                // AJAX Signup
+                e.preventDefault();
+                const submitBtn = signupForm.querySelector('button[type="submit"]');
+                const originalText = submitBtn.textContent;
+                submitBtn.textContent = 'Creating Account...';
+                submitBtn.disabled = true;
+
+                const formData = new FormData();
+                formData.append('email', emailInput.value);
+                formData.append('password', passwordInput.value);
+                formData.append('first_name', nameInputs[0].value);
+                formData.append('last_name', nameInputs[1].value);
+                formData.append('ajax_signup', '1');
+
+                fetch('signup.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Redirect to home or login
+                            window.location.href = 'index.php';
+                        } else {
+                            showError(emailInput, data.message || 'Error occurred during signup');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Signup error:', err);
+                        showError(emailInput, 'An error occurred. Please try again.');
+                    })
+                    .finally(() => {
+                        submitBtn.textContent = originalText;
+                        submitBtn.disabled = false;
+                    });
             }
         });
     }
@@ -175,28 +240,28 @@ document.addEventListener('DOMContentLoaded', function() {
         // Checkout logic is triggered by "Complete Order" button which is outside the form tags in the provided snippets sometimes,
         // or effectively the "Place Order" button calls a function.
         // We need to intercept that button if it exists, or attach to the form submission if wrapped.
-        
-        // In the provided checkout.php, there's a button onclick="placeOrder()". 
-        // We will remove that inline handler and attach event listener here.
-        
-        const placeOrderBtn = document.querySelector('button.btn-primary[onclick*="placeOrder"]');
+
+        // In the provided checkout.php, we removed the inline onclick="placeOrder()".
+        // We will select the button by its class within the checkout-form container.
+
+        const placeOrderBtn = checkoutForm.querySelector('.btn-primary');
         if (placeOrderBtn) {
             // Remove the inline attribute to prevent double firing before we attach our logic? 
             // Best practice is to replace the element or let the inline remain but preventDefault in our handler? 
             // The instructions say "Modify existing JS only where required" and "Remove inline JS".
             // So we will assume we remove the onclick attribute in the PHP file.
-            
-            placeOrderBtn.addEventListener('click', function(e) {
+
+            placeOrderBtn.addEventListener('click', function (e) {
                 let isValid = true;
-                
+
                 // Fields
                 const requiredInputs = document.querySelectorAll('.checkout-form input[required]');
-                
+
                 const showError = (input, msg) => {
                     input.style.borderColor = '#ef4444';
                     // Optional: tooltip or text below
                 };
-                
+
                 const clearError = (input) => {
                     input.style.borderColor = '';
                 };
@@ -207,13 +272,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         showError(input);
                         isValid = false;
                     }
-                    
+
                     // Specific validations
                     if (input.placeholder === '10001' || input.previousElementSibling.textContent.includes('Postal')) {
-                           if (!/^\d+$/.test(input.value.trim()) || input.value.trim().length < 5) {
-                               showError(input);
-                               isValid = false;  
-                           }
+                        if (!/^\d+$/.test(input.value.trim()) || input.value.trim().length < 5) {
+                            showError(input);
+                            isValid = false;
+                        }
                     }
                 });
 
@@ -228,7 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // If valid, allow process to continue (which was the alert logic in original)
                 // We'll reimplement the success alert logic here properly or just return true
                 // But since we are replacing the inline placeOrder(), we must reproduce its success logic here.
-                
+
                 // Check Payment Method
                 const paymentMethod = document.querySelector('input[name="payment_method"]:checked');
                 if (!paymentMethod) {
@@ -252,7 +317,7 @@ document.addEventListener('click', (e) => {
         const input = btn.previousElementSibling;
         const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
         input.setAttribute('type', type);
-        
+
         // Update Icon (Simplified for brevity, can use the SVGs from original)
         // We can toggle a class on the button to switch cleaner CSS icons if available, 
         // or just swap HTML.

@@ -58,8 +58,28 @@ include 'includes/header.php';
     <section class="section">
         <div class="product-detail">
             <div class="product-gallery">
-                <img src="<?php echo htmlspecialchars($product['image']); ?>" 
-                     alt="<?php echo htmlspecialchars($product['name']); ?>">
+                <div class="main-image-container">
+                    <img src="<?php echo htmlspecialchars($product['image']); ?>" 
+                         alt="<?php echo htmlspecialchars($product['name']); ?>"
+                         class="main-image">
+                </div>
+                
+                <?php if (isset($product['gallery']) && !empty($product['gallery'])): ?>
+                    <div class="thumbnails">
+                        <div class="thumb-item active">
+                            <img src="<?php echo htmlspecialchars($product['image']); ?>" 
+                                 alt="<?php echo htmlspecialchars($product['name']); ?>"
+                                 class="thumb-img">
+                        </div>
+                        <?php foreach ($product['gallery'] as $thumb): ?>
+                            <div class="thumb-item">
+                                <img src="<?php echo htmlspecialchars($thumb); ?>" 
+                                     alt="<?php echo htmlspecialchars($product['name']); ?>"
+                                     class="thumb-img">
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
             
             <div class="product-content">

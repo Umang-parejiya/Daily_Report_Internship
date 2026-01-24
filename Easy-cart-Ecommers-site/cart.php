@@ -21,22 +21,55 @@ if (isset($_GET['remove'])) {
     exit;
 }
 
-// 2. Update Quantity (Add/Subtract)
+// 2. Update Quantity (Add/Subtract) - JSON/AJAX Support
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_POST['product_id'])) {
     $action = $_POST['action'];
     $pid = intval($_POST['product_id']);
     
+    // Perform modification
     if ($action === 'increase') {
         $_SESSION['cart'][] = $pid;
     } elseif ($action === 'decrease') {
-        // Remove ONE instance of this ID
+        if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
+            $_SESSION['cart'] = [];
+        }
         $key = array_search($pid, $_SESSION['cart']);
         if ($key !== false) {
             unset($_SESSION['cart'][$key]);
             $_SESSION['cart'] = array_values($_SESSION['cart']); 
         }
     }
-    // Redirect to prevent form resubmission
+
+    // If AJAX request, return new state
+    if (isset($_POST['ajax_update'])) {
+        header('Content-Type: application/json');
+        
+        // Recalculate totals
+        $cart_counts = array_count_values($_SESSION['cart']);
+        $new_qty = isset($cart_counts[$pid]) ? $cart_counts[$pid] : 0;
+        
+        // Calculate totals
+        $subtotal = 0;
+        foreach ($cart_counts as $id => $qty) {
+            foreach ($products as $p) {
+                if ($p['id'] === $id) {
+                    $subtotal += $p['price'] * $qty;
+                }
+            }
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'productId' => $pid,
+            'newQty' => $new_qty,
+            'newSubtotal' => number_format($subtotal),
+            'newTotal' => number_format($subtotal), // Assuming free shipping for update immediate feedback or recalc later
+            'removed' => ($new_qty === 0)
+        ]);
+        exit;
+    }
+
+    // Fallback for non-AJAX
     header('Location: cart.php');
     exit;
 }
