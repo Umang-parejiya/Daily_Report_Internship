@@ -303,8 +303,43 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
-                // Success
-                alert('Job done! Order placed validly.');
+                // Prepare Data
+                const shippingMethod = document.querySelector('input[name="shipping_method"]:checked');
+                const shippingCost = shippingMethod ? shippingMethod.closest('.selection-card').querySelector('.card-price').textContent.replace(/[^\d.]/g, '') : 0;
+
+                // Simulate/Real AJAX Checkout
+                const btn = placeOrderBtn;
+                const originalText = btn.textContent;
+                btn.textContent = 'Processing Order...';
+                btn.disabled = true;
+
+                const formData = new FormData();
+                formData.append('ajax_place_order', '1');
+                formData.append('payment_method', paymentMethod.value);
+                formData.append('shipping_method', shippingMethod ? shippingMethod.value : 'standard');
+                // Send cost for calculation (in real app, calculate on server based on method ID)
+                formData.append('shipping_cost', shippingCost || 0);
+
+                fetch('checkout.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.href = data.redirect;
+                        } else {
+                            alert('Order failed: ' + (data.message || 'Unknown error'));
+                            btn.textContent = originalText;
+                            btn.disabled = false;
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Order error:', err);
+                        alert('An error occurred while placing your order.');
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    });
             });
         }
     }

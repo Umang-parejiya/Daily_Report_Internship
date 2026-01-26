@@ -8,6 +8,64 @@ $page_title = 'Easy-Cart - Checkout';
 // Load products data
 require_once 'data/products.php';
 
+// Handle Order Creation (AJAX)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_place_order'])) {
+    header('Content-Type: application/json');
+    
+    // Simulate Order ID
+    $order_id = mt_rand(100000, 999999);
+    
+    // Calculate total again for security
+    $cart_product_ids = array_count_values($_SESSION['cart']);
+    $order_items = [];
+    $order_total = 0;
+    
+    foreach ($cart_product_ids as $pid => $qty) {
+        foreach ($products as $p) {
+            if ($p['id'] === $pid) {
+                $line_total = $p['price'] * $qty;
+                $order_total += $line_total;
+                $order_items[] = [
+                    'product_id' => $pid,
+                    'quantity' => $qty,
+                    'price' => $p['price']
+                ];
+                break;
+            }
+        }
+    }
+    
+    // Add Shipping (Simplified based on POST or default)
+    $shipping_cost = isset($_POST['shipping_cost']) ? floatval($_POST['shipping_cost']) : 0;
+    $final_total = $order_total + $shipping_cost;
+    
+    // Create Order Object
+    $new_order = [
+        'order_id' => $order_id,
+        'date' => date('Y-m-d'),
+        'status' => 'Processing',
+        'total' => $final_total,
+        'items' => $order_items
+    ];
+    
+    // Save to Session (Mock Database)
+    if (!isset($_SESSION['orders'])) {
+        $_SESSION['orders'] = [];
+    }
+    // Prepend new order
+    array_unshift($_SESSION['orders'], $new_order);
+    
+    // Clear Cart
+    unset($_SESSION['cart']);
+    
+    echo json_encode([
+        'success' => true,
+        'order_id' => $order_id,
+        'redirect' => 'orders.php'
+    ]);
+    exit;
+}
+
 // Check if cart is empty
 if (!isset($_SESSION['cart']) || count($_SESSION['cart']) === 0) {
     header('Location: cart.php');

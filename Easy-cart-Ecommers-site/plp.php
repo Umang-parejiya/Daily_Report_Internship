@@ -46,13 +46,7 @@ include 'includes/header.php';
                 ?>
             </h1>
             <p class="section-subtitle">
-                <?php 
-                if ($filter_category || $filter_brand) {
-                    echo 'Showing ' . count($filtered_products) . ' product(s)';
-                } else {
-                    echo 'Discover our complete collection';
-                }
-                ?>
+                Showing <?php echo count($filtered_products); ?> product<?php echo count($filtered_products) !== 1 ? 's' : ''; ?>
             </p>
         </div>
 
