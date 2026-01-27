@@ -16,9 +16,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- Select Elements ---
     const shippingForm = document.getElementById('shippingForm');
-    const subtotalElement = document.querySelector('.checkout-sidebar .card > div:nth-child(2) > div:nth-child(1) span:nth-child(2)'); // Subtotal value
-    const shippingElement = document.querySelector('.checkout-sidebar .card > div:nth-child(2) > div:nth-child(2) span:nth-child(2)'); // Shipping value
-    const totalElement = document.querySelector('.checkout-sidebar .card > div:nth-child(2) > div:nth-child(3) span:nth-child(2)'); // Total value (accent color)
+    const subtotalElement = document.getElementById('subtotal-value'); // Subtotal value
+    const shippingElement = document.getElementById('shipping-value'); // Shipping value
+    const totalElement = document.getElementById('total-value'); // Total value
 
     if (shippingForm && subtotalElement && shippingElement && totalElement) {
 

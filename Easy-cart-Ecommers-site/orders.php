@@ -41,6 +41,24 @@ include 'includes/header.php';
             <p class="section-subtitle">Track and manage your orders</p>
         </div>
 
+        <!-- Shopping Process Progress Indicator -->
+        <div class="checkout-progress" style="margin-bottom: 2rem;">
+            <div class="step completed">
+                <div class="step-number">✓</div>
+                <span>Cart</span>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step completed">
+                <div class="step-number">✓</div>
+                <span>Information</span>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step completed active">
+                <div class="step-number">✓</div>
+                <span>Complete</span>
+            </div>
+        </div>
+
         <?php if (count($my_orders) > 0): ?>
             <?php foreach ($my_orders as $order): ?>
                 <div class="card" style="margin-bottom: 2rem;">
@@ -89,6 +107,53 @@ include 'includes/header.php';
                             <?php endif; ?>
                         </div>
                     </div>
+
+                    <!-- Progress Indicator -->
+                    <?php if ($status !== 'Cancelled'): ?>
+                        <div style="margin: 2rem 0; padding: 1.5rem; background: var(--bg-accent); border-radius: 12px;">
+                            <div class="checkout-progress" style="margin: 0;">
+                                <!-- Processing Step -->
+                                <div class="step <?php echo ($status === 'Processing' || $status === 'Shipped' || $status === 'Delivered') ? 'completed' : ''; ?>">
+                                    <div class="step-number"><?php echo ($status === 'Processing' || $status === 'Shipped' || $status === 'Delivered') ? '✓' : '1'; ?></div>
+                                    <span>Processing</span>
+                                </div>
+                                <div class="step-divider"></div>
+                                
+                                <!-- Shipped Step -->
+                                <div class="step <?php echo ($status === 'Shipped' || $status === 'Delivered') ? 'completed' : ($status === 'Processing' ? '' : ''); ?>">
+                                    <div class="step-number"><?php echo ($status === 'Shipped' || $status === 'Delivered') ? '✓' : '2'; ?></div>
+                                    <span>Shipped</span>
+                                </div>
+                                <div class="step-divider"></div>
+                                
+                                <!-- Delivered Step -->
+                                <div class="step <?php echo ($status === 'Delivered') ? 'completed' : ''; ?>">
+                                    <div class="step-number"><?php echo ($status === 'Delivered') ? '✓' : '3'; ?></div>
+                                    <span>Delivered</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Status Message -->
+                            <div style="text-align: center; margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
+                                <?php 
+                                if ($status === 'Processing') {
+                                    echo '📦 Your order is being prepared';
+                                } elseif ($status === 'Shipped') {
+                                    echo '🚚 Your order is on the way';
+                                } elseif ($status === 'Delivered') {
+                                    echo '✅ Your order has been delivered';
+                                }
+                                ?>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <!-- Cancelled Order Message -->
+                        <div style="margin: 2rem 0; padding: 1.5rem; background: #fee2e2; border-radius: 12px; text-align: center;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">❌</div>
+                            <div style="font-weight: 600; color: #991b1b; margin-bottom: 0.25rem;">Order Cancelled</div>
+                            <div style="font-size: 0.875rem; color: #7f1d1d;">This order has been cancelled and will not be processed.</div>
+                        </div>
+                    <?php endif; ?>
 
                     <div class="table-container" style="border: none; box-shadow: none;">
                         <table style="width: 100%;">

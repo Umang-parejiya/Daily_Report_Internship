@@ -306,17 +306,17 @@ include 'includes/header.php';
                     <div style="border-top: 2px solid var(--border); padding-top: 1rem;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                             <span style="color: var(--text-secondary);">Subtotal</span>
-                            <span>₹<?php echo number_format($subtotal); ?></span>
+                            <span id="subtotal-value">₹<?php echo number_format($subtotal); ?></span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
                             <span style="color: var(--text-secondary);">Shipping</span>
-                            <span style="<?php echo ($shipping == 0) ? 'color: var(--success);' : ''; ?>">
+                            <span id="shipping-value" style="<?php echo ($shipping == 0) ? 'color: var(--success);' : ''; ?>">
                                 <?php echo ($shipping == 0) ? 'FREE' : '₹' . number_format($shipping); ?>
                             </span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border);">
                             <span style="font-size: 1.25rem; font-weight: 700;">Total</span>
-                            <span style="font-size: 1.25rem; font-weight: 700; color: var(--accent);">
+                            <span id="total-value" style="font-size: 1.25rem; font-weight: 700; color: var(--accent);">
                                 ₹<?php echo number_format($total); ?>
                             </span>
                         </div>
