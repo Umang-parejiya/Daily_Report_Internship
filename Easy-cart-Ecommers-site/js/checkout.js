@@ -56,8 +56,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         discount = parseFloat(discountElement.getAttribute('data-value')) || parsePrice(discountElement.textContent);
                     }
 
-                    // Calculate Tax (18%) on (Subtotal - Discount + Shipping)
-                    const taxableAmount = subtotal - discount + shippingCost;
+                    // Calculate Tax (18%) on (Subtotal - Discount)
+                    // Shipping is added AFTER tax
+                    const taxableAmount = subtotal - discount;
                     const taxAmount = Math.round(taxableAmount * 0.18);
 
                     const taxElement = document.getElementById('tax-value');
@@ -65,8 +66,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         taxElement.textContent = formatPrice(taxAmount);
                     }
 
-                    // Update Total Display
-                    const newTotal = taxableAmount + taxAmount;
+                    // Update Total Display (Subtotal - Discount + Tax + Shipping)
+                    const newTotal = taxableAmount + taxAmount + shippingCost;
                     totalElement.textContent = formatPrice(newTotal);
 
                 } else {

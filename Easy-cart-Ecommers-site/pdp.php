@@ -20,6 +20,33 @@ foreach ($products as $p) {
     }
 }
 
+// Handle AJAX Add to Cart phase 5
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_add'])) {
+    header('Content-Type: application/json');
+    
+    // Initialize cart
+    if (!isset($_SESSION['cart'])) {
+        $_SESSION['cart'] = [];
+    }
+    
+    $pid = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
+    
+    if ($pid > 0) {
+        $_SESSION['cart'][] = $pid;
+        echo json_encode([
+            'success' => true,
+            'cartCount' => count($_SESSION['cart']),
+            'message' => 'Product added to cart successfully!'
+        ]);
+    } else {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid product ID'
+        ]);
+    }
+    exit;
+}
+
 // Handle Add to Cart POST request
 $cart_message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
@@ -83,6 +110,10 @@ include 'includes/header.php';
             </div>
             
             <div class="product-content">
+                <div id="pdp-success-banner" class="pdp-success-banner" style="display: none;">
+                    <span>Your product has been added successfully</span>
+                    <a href="cart.php" class="btn-view-cart">View Cart</a>
+                </div>
                 <h1><?php echo htmlspecialchars($product['name']); ?></h1>
                 <div class="product-price">₹<?php echo number_format($product['price']); ?></div>
                 

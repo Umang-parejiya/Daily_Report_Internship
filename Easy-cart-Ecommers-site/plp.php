@@ -89,8 +89,8 @@ include 'includes/header.php';
                     <a href="plp.php" class="btn btn-primary" style="margin-top: 1rem;">View All Products</a>
                 </div>
             <?php endif; ?>
-        </div>
-
+        </div>  
+<!-- pagination changes  -->
         <?php if ($total_pages > 1): ?>
             <div class="pagination">
                 <?php 

@@ -1391,3 +1391,39 @@ footer::before {
     font-size: 0.75rem;
   }
 }
+
+/* PDP Success Banner */
+.pdp-success-banner {
+  background-color: #d1fae5;
+  color: #065f46;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #a7f3d0;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.pdp-success-banner.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.pdp-success-banner .btn-view-cart {
+  background-color: #059669;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.pdp-success-banner .btn-view-cart:hover {
+  background-color: #047857;
+}

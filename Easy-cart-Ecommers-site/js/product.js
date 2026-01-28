@@ -54,4 +54,56 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
     }
+    // --- PDP: AJAX Add to Cart ---
+    const addToCartBtn = document.querySelector('button[name="add_to_cart"]');
+    if (addToCartBtn) {
+        addToCartBtn.closest('form').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = urlParams.get('id');
+
+            if (!productId) return;
+
+            const formData = new FormData();
+            formData.append('ajax_add', '1');
+            formData.append('product_id', productId);
+
+            // Button loading state
+            const originalText = addToCartBtn.textContent;
+            addToCartBtn.textContent = 'Adding...';
+            addToCartBtn.disabled = true;
+
+            fetch('pdp.php?id=' + productId, {
+                method: 'POST',
+                body: formData
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show Success Banner (No Alert)
+                        const banner = document.getElementById('pdp-success-banner');
+                        if (banner) {
+                            banner.style.display = 'flex';
+                            void banner.offsetWidth; // Force reflow
+                            banner.classList.add('visible');
+                        }
+                        addToCartBtn.textContent = '✔ Added';
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('Something went wrong');
+                })
+                .finally(() => {
+                    setTimeout(() => {
+                        addToCartBtn.textContent = originalText;
+                        addToCartBtn.disabled = false;
+                    }, 2000);
+                });
+        });
+    }
+
 });
