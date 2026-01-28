@@ -50,7 +50,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_place_order'])) 
 
     // Add Shipping (Simplified based on POST or default)
     $shipping_cost = isset($_POST['shipping_cost']) ? floatval($_POST['shipping_cost']) : 0;
-    $final_total = $order_total - $discount + $shipping_cost;
+    
+    // Calculate Tax (18% on Subtotal - Discount + Shipping)
+    $taxable = ($order_total - $discount) + $shipping_cost;
+    $tax = $taxable * 0.18;
+    
+    // Final Total
+    $final_total = $taxable + $tax;
     
     // Create Order Object
     $new_order = [
@@ -108,25 +114,31 @@ foreach ($cart_items as $item) {
     $subtotal += $item['subtotal'];
 }
 
-// Shipping options with delivery estimates
+// Shipping options with dynamic cost calculation (Phase 4 Rules)
 $shipping_options = [
-    'free' => [
-        'name' => 'Free Shipping', 
-        'cost' => 0,
-        'delivery' => '6-7 business days',
+    'standard' => [
+        'name' => 'Standard Shipping', 
+        'cost' => 40,
+        'delivery' => '5-7 business days',
         'icon' => '🚚'
     ],
-    'standard' => [
-        'name' => 'Standard', 
-        'cost' => 1000,
-        'delivery' => '3-4 business days',
-        'icon' => '📦'
-    ],
     'express' => [
-        'name' => 'Express', 
-        'cost' => 2000,
-        'delivery' => 'Next day delivery',
-        'icon' => '🚀'
+        'name' => 'Express Shipping', 
+        'cost' => min(80, $subtotal * 0.10),
+        'delivery' => '2-3 business days',
+        'icon' => '⚡'
+    ],
+    'white_glove' => [
+        'name' => 'White Glove Delivery', 
+        'cost' => min(150, $subtotal * 0.05),
+        'delivery' => 'Scheduled delivery',
+        'icon' => '🧤'
+    ],
+    'freight' => [
+        'name' => 'Freight Shipping', 
+        'cost' => max(200, $subtotal * 0.03),
+        'delivery' => '7-14 business days',
+        'icon' => '🚢'
     ]
 ];
 
@@ -155,8 +167,12 @@ if ($total_quantity > 0 && $total_quantity % 2 === 0) {
     $discount = ($subtotal * $discount_percentage) / 100;
 }
 
-// Calculate total
-$total = $subtotal - $discount + $shipping;
+// Calculate Tax (18% on Subtotal - Discount + Shipping)
+$taxable_amount = ($subtotal - $discount) + $shipping;
+$tax = $taxable_amount * 0.18;
+
+// Calculate Final Total
+$total = $taxable_amount + $tax;
 
 // Include header
 include 'includes/header.php';
@@ -351,6 +367,12 @@ include 'includes/header.php';
                                 <?php echo ($shipping == 0) ? 'FREE' : '₹' . number_format($shipping); ?>
                             </span>
                         </div>
+
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                            <span style="color: var(--text-secondary);">GST (18%)</span>
+                            <span id="tax-value">₹<?php echo number_format($tax); ?></span>
+                        </div>
+
                         <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border);">
                             <span style="font-size: 1.25rem; font-weight: 700;">Total</span>
                             <span id="total-value" style="font-size: 1.25rem; font-weight: 700; color: var(--accent);">

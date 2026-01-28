@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         shippingElement.style.color = '';
                     }
 
-                    // Check for discount
+                    // Check for discount based on quantity
                     const discountElement = document.getElementById('discount-value');
                     let discount = 0;
                     if (discountElement) {
@@ -56,8 +56,17 @@ document.addEventListener('DOMContentLoaded', function () {
                         discount = parseFloat(discountElement.getAttribute('data-value')) || parsePrice(discountElement.textContent);
                     }
 
+                    // Calculate Tax (18%) on (Subtotal - Discount + Shipping)
+                    const taxableAmount = subtotal - discount + shippingCost;
+                    const taxAmount = Math.round(taxableAmount * 0.18);
+
+                    const taxElement = document.getElementById('tax-value');
+                    if (taxElement) {
+                        taxElement.textContent = formatPrice(taxAmount);
+                    }
+
                     // Update Total Display
-                    const newTotal = subtotal - discount + shippingCost;
+                    const newTotal = taxableAmount + taxAmount;
                     totalElement.textContent = formatPrice(newTotal);
 
                 } else {
