@@ -51,10 +51,38 @@ document.addEventListener('DOMContentLoaded', function () {
                             // Update globals
                             const summaryTable = document.querySelector('.table-container table');
                             if (summaryTable) {
-                                // Subtotal
+                                // Subtotal (row 0)  Calculate total quantity discount even logic
                                 summaryTable.rows[0].cells[1].textContent = `₹${data.newSubtotal}`;
-                                // Total (assuming row 2 or 3)
-                                const totalRow = summaryTable.rows[summaryTable.rows.length - 1]; // Last row usually
+
+                                // Handle discount row dynamically
+                                let discountRow = summaryTable.querySelector('tr[data-discount-row]');
+
+                                if (data.hasDiscount) {
+                                    if (!discountRow) {
+                                        // Create discount row if it doesn't exist
+                                        discountRow = summaryTable.insertRow(2); // Insert before Total row
+                                        discountRow.setAttribute('data-discount-row', 'true');
+                                        discountRow.innerHTML = `
+                                            <td style="padding: 0.5rem 0; border: none; color: var(--success);">
+                                                Discount (<span class="discount-percentage"></span>% off based on even quantity)
+                                            </td>
+                                            <td style="padding: 0.5rem 0; border: none; text-align: right; font-weight: 600; color: var(--success);">
+                                                -₹<span class="discount-amount"></span>
+                                            </td>
+                                        `;
+                                    }
+                                    // Update discount values
+                                    discountRow.querySelector('.discount-percentage').textContent = data.discountPercentage;
+                                    discountRow.querySelector('.discount-amount').textContent = data.newDiscount;
+                                } else {
+                                    // Remove discount row if it exists and discount is 0
+                                    if (discountRow) {
+                                        discountRow.remove();
+                                    }
+                                }
+
+                                // Total (last row)
+                                const totalRow = summaryTable.rows[summaryTable.rows.length - 1];
                                 totalRow.cells[1].innerHTML = `<strong style="font-size: 1.1rem; color: var(--accent);">₹${data.newTotal}</strong>`;
                             }
                         }

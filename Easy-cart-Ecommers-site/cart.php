@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_
         $cart_counts = array_count_values($_SESSION['cart']);
         $new_qty = isset($cart_counts[$pid]) ? $cart_counts[$pid] : 0;
         
-        // Calculate totals
+        // Calculate subtotal
         $subtotal = 0;
         foreach ($cart_counts as $id => $qty) {
             foreach ($products as $p) {
@@ -58,12 +58,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_
             }
         }
         
+        // Calculate total quantity and discount
+        $total_quantity = array_sum($cart_counts);
+        $discount = 0;
+        $discount_percentage = 0;
+        if ($total_quantity > 0 && $total_quantity % 2 === 0) {
+            $discount_percentage = min($total_quantity, 50);   // 50% max discount
+            $discount = ($subtotal * $discount_percentage) / 100;
+        }
+        
+        $total = $subtotal - $discount;
+        
         echo json_encode([
             'success' => true,
             'productId' => $pid,
             'newQty' => $new_qty,
             'newSubtotal' => number_format($subtotal),
-            'newTotal' => number_format($subtotal), // Assuming free shipping for update immediate feedback or recalc later
+            'newDiscount' => number_format($discount),
+            'discountPercentage' => $discount_percentage,
+            'hasDiscount' => ($discount > 0),
+            'newTotal' => number_format($total),
             'removed' => ($new_qty === 0)
         ]);
         exit;
@@ -109,8 +123,19 @@ foreach ($cart_counts as $product_id => $quantity) {
     }
 }
 
+// Calculate total quantity discount even logic 
+$total_quantity = array_sum($cart_counts);
+
+// Calculate discount if quantity is even
+$discount = 0;
+$discount_percentage = 0;
+if ($total_quantity > 0 && $total_quantity % 2 === 0) {
+    $discount_percentage = min($total_quantity, 50);
+    $discount = ($subtotal * $discount_percentage) / 100;
+}
+
 // Total (shipping calculated at checkout)
-$total = $subtotal;
+$total = $subtotal - $discount;
 
 include 'includes/header.php';
 ?>
@@ -227,6 +252,18 @@ include 'includes/header.php';
                                             Calculated at checkout
                                         </td>
                                     </tr>
+                                    <!-- Calculate total quantity discount even logic -->
+                                    <?php if ($discount > 0): ?>
+                                    <tr>
+                                        <td style="padding: 0.5rem 0; border: none; color: var(--success);">
+                                            Discount (<?php echo $discount_percentage; ?>% off based on even quantity)
+                                        </td>
+                                        <td style="padding: 0.5rem 0; border: none; text-align: right; font-weight: 600; color: var(--success);">
+                                            -₹<?php echo number_format($discount); ?>
+                                        </td>
+                                    </tr>
+                                    <?php endif; ?>
+                                   
                                     <tr style="border-top: 2px solid var(--border);">
                                         <td style="padding: 1rem 0; border: none;"><strong style="font-size: 1.1rem;">Total Est.</strong></td>
                                         <td style="padding: 1rem 0; border: none; text-align: right;"><strong style="font-size: 1.1rem; color: var(--accent);">₹<?php echo number_format($total); ?></strong></td>

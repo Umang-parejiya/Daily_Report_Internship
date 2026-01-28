@@ -1328,3 +1328,66 @@ footer::before {
   margin-bottom: 1.5rem;
   display: block;
 }
+
+/* =========================================================
+   PAGINATION
+   ========================================================= */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 3rem;
+  padding: 1rem;
+}
+
+.page-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 45px;
+  height: 45px;
+  padding: 0 1rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all var(--transition);
+  text-decoration: none;
+}
+
+.page-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.page-link.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+.page-link:first-child,
+.page-link:last-child {
+  min-width: 80px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 480px) {
+  .pagination {
+    gap: 0.25rem;
+  }
+
+  .page-link {
+    min-width: 35px;
+    height: 35px;
+    padding: 0 0.5rem;
+    font-size: 0.75rem;
+  }
+}

@@ -7,19 +7,25 @@
 
 document.addEventListener('DOMContentLoaded', function () {
 
-    // --- PLP: Product Count ---
+    // --- PLP: Product Count & Pagination ---
     const productGrid = document.querySelector('.product-grid');
     if (productGrid) {
         const productCards = document.querySelectorAll('.product-card');
         const count = productCards.length;
 
-        // Look for the subtitle "Showing X product(s)"
-        // In plp.php: <p class="section-subtitle">Showing ... product(s)</p>
+        // Update product count display if it exists
         const subtitle = document.querySelector('.section-subtitle');
-        if (subtitle && subtitle.textContent.includes('Showing')) {
-            // Extract text parts to preserve formatting if needed, or just replace
-            subtitle.textContent = `Showing ${count} product(s)`;
-        }
+        // If JS is preferred for simple display, it updates here. 
+        // Note: PHP now handles "Showing X of Y" more accurately.
+
+        // Optional: Highlight active page (redundant but requested)
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentPage = urlParams.get('page') || '1';
+        document.querySelectorAll('.page-link').forEach(link => {
+            if (link.textContent.trim() === currentPage) {
+                link.classList.add('active');
+            }
+        });
     }
 
     // --- PDP: Image Switching ---

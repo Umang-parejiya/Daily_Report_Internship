@@ -48,8 +48,16 @@ document.addEventListener('DOMContentLoaded', function () {
                         shippingElement.style.color = '';
                     }
 
+                    // Check for discount
+                    const discountElement = document.getElementById('discount-value');
+                    let discount = 0;
+                    if (discountElement) {
+                        // Use data-value for precision, fallback to text parsing
+                        discount = parseFloat(discountElement.getAttribute('data-value')) || parsePrice(discountElement.textContent);
+                    }
+
                     // Update Total Display
-                    const newTotal = subtotal + shippingCost;
+                    const newTotal = subtotal - discount + shippingCost;
                     totalElement.textContent = formatPrice(newTotal);
 
                 } else {

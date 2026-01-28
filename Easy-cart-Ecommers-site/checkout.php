@@ -35,9 +35,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_place_order'])) 
         }
     }
     
+    // Calculate total quantity for discount quantity
+    $total_quantity = 0;
+    foreach ($order_items as $item) {
+        $total_quantity += $item['quantity'];
+    }
+
+    // Calculate discount if quantity is even
+    $discount = 0;
+    if ($total_quantity > 0 && $total_quantity % 2 === 0) {
+        $discount_percentage = min($total_quantity, 50);
+        $discount = ($order_total * $discount_percentage) / 100;
+    }
+
     // Add Shipping (Simplified based on POST or default)
     $shipping_cost = isset($_POST['shipping_cost']) ? floatval($_POST['shipping_cost']) : 0;
-    $final_total = $order_total + $shipping_cost;
+    $final_total = $order_total - $discount + $shipping_cost;
     
     // Create Order Object
     $new_order = [
@@ -128,8 +141,22 @@ if (!isset($shipping_options[$selected_shipping])) {
 // Calculate shipping cost
 $shipping = $shipping_options[$selected_shipping]['cost'];
 
+// Calculate total quantity for discount
+$total_quantity = 0;
+foreach ($cart_items as $item) {
+    $total_quantity += $item['quantity'];
+}
+
+// Calculate discount if quantity is even
+$discount = 0;
+$discount_percentage = 0;
+if ($total_quantity > 0 && $total_quantity % 2 === 0) {
+    $discount_percentage = min($total_quantity, 50);   // max 50% discount
+    $discount = ($subtotal * $discount_percentage) / 100;
+}
+
 // Calculate total
-$total = $subtotal + $shipping;
+$total = $subtotal - $discount + $shipping;
 
 // Include header
 include 'includes/header.php';
@@ -308,6 +335,16 @@ include 'includes/header.php';
                             <span style="color: var(--text-secondary);">Subtotal</span>
                             <span id="subtotal-value">₹<?php echo number_format($subtotal); ?></span>
                         </div>
+                            <!-- Calculate total quantity for discount quantity -->
+                        <?php if ($discount > 0): ?>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="color: var(--success);">Discount (<?php echo $discount_percentage; ?>% off based on even quantity)</span>
+                            <span id="discount-value" style="color: var(--success);" data-value="<?php echo $discount; ?>">
+                                -₹<?php echo number_format($discount); ?>
+                            </span>
+                        </div>
+                        <?php endif; ?>
+
                         <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
                             <span style="color: var(--text-secondary);">Shipping</span>
                             <span id="shipping-value" style="<?php echo ($shipping == 0) ? 'color: var(--success);' : ''; ?>">

@@ -27,6 +27,22 @@ if ($filter_brand) {
     $page_title = 'Easy-Cart - ' . htmlspecialchars($filter_brand) . ' Products';
 }
 
+// Pagination settings
+$items_per_page = 6;
+$current_page_num = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+
+// Calculate pagination items
+$total_items = count($filtered_products);
+$total_pages = ceil($total_items / $items_per_page);
+
+// Ensure current page is not beyond total pages
+if ($total_pages > 0 && $current_page_num > $total_pages) {
+    $current_page_num = $total_pages;
+}
+
+$offset = ($current_page_num - 1) * $items_per_page;
+$paged_products = array_slice($filtered_products, $offset, $items_per_page);
+
 // Include header
 include 'includes/header.php';
 ?>
@@ -46,13 +62,13 @@ include 'includes/header.php';
                 ?>
             </h1>
             <p class="section-subtitle">
-                Showing <?php echo count($filtered_products); ?> product<?php echo count($filtered_products) !== 1 ? 's' : ''; ?>
+                Showing <?php echo count($paged_products); ?> of <?php echo $total_items; ?> product<?php echo $total_items !== 1 ? 's' : ''; ?>
             </p>
         </div>
 
         <div class="product-grid">
-            <?php if (count($filtered_products) > 0): ?>
-                <?php foreach ($filtered_products as $product): ?>
+            <?php if (count($paged_products) > 0): ?>
+                <?php foreach ($paged_products as $product): ?>
                     <div class="product-card">
                         <img src="<?php echo htmlspecialchars($product['image']); ?>" 
                              alt="<?php echo htmlspecialchars($product['name']); ?>" 
@@ -74,6 +90,33 @@ include 'includes/header.php';
                 </div>
             <?php endif; ?>
         </div>
+
+        <?php if ($total_pages > 1): ?>
+            <div class="pagination">
+                <?php 
+                // Build base URL for pagination links
+                $params = $_GET;
+                unset($params['page']);
+                $query = http_build_query($params);
+                $base_url = "plp.php?" . ($query ? $query . "&" : "");
+                ?>
+
+                <?php if ($current_page_num > 1): ?>
+                    <a href="<?php echo $base_url . 'page=' . ($current_page_num - 1); ?>" class="page-link">Prev</a>
+                <?php endif; ?>
+
+                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                    <a href="<?php echo $base_url . 'page=' . $i; ?>" 
+                       class="page-link <?php echo $i === $current_page_num ? 'active' : ''; ?>">
+                        <?php echo $i; ?>
+                    </a>
+                <?php endfor; ?>
+
+                <?php if ($current_page_num < $total_pages): ?>
+                    <a href="<?php echo $base_url . 'page=' . ($current_page_num + 1); ?>" class="page-link">Next</a>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     </section>
 </div>
 
