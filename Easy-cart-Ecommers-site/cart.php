@@ -17,6 +17,47 @@ if (isset($_GET['remove'])) {
         });
         $_SESSION['cart'] = array_values($_SESSION['cart']); // Re-index
     }
+
+    // AJAX Response
+    if (isset($_GET['ajax_remove'])) {
+        header('Content-Type: application/json');
+
+        // Recalculate totals
+        $cart_counts = array_count_values($_SESSION['cart']);
+        
+        // Calculate subtotal
+        $subtotal = 0;
+        foreach ($cart_counts as $id => $qty) {
+            foreach ($products as $p) {
+                if ($p['id'] === $id) {
+                    $subtotal += $p['price'] * $qty;
+                }
+            }
+        }
+        
+        // Calculate total quantity and discount
+        $total_quantity = array_sum($cart_counts);
+        $discount = 0;
+        $discount_percentage = 0;
+        if ($total_quantity > 0 && $total_quantity % 2 === 0) {
+            $discount_percentage = min($total_quantity, 50);   // 50% max discount
+            $discount = ($subtotal * $discount_percentage) / 100;
+        }
+        
+        $total = $subtotal - $discount;
+        
+        echo json_encode([
+            'success' => true,
+            'cartCount' => count($_SESSION['cart']),
+            'newSubtotal' => number_format($subtotal),
+            'newDiscount' => number_format($discount),
+            'discountPercentage' => $discount_percentage,
+            'hasDiscount' => ($discount > 0),
+            'newTotal' => number_format($total)
+        ]);
+        exit;
+    }
+
     header('Location: cart.php');
     exit;
 }

@@ -8,6 +8,84 @@ $page_title = 'Easy-Cart - Checkout';
 // Load products data
 require_once 'data/products.php';
 
+// Handle Shipping Update (AJAX)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_update_shipping'])) {
+    header('Content-Type: application/json');
+    
+    if (!isset($_SESSION['cart']) || empty($_SESSION['cart'])) {
+        echo json_encode(['success' => false, 'message' => 'Cart is empty']);
+        exit;
+    }
+
+    // Save Selection to Session
+    $method = $_POST['shipping_method'] ?? null;
+    if ($method) {
+        $_SESSION['shipping_method'] = $method;
+    }
+
+    // Calculate Subtotal
+    $cart_product_ids = array_count_values($_SESSION['cart']);
+    $subtotal = 0;
+    $total_quantity = 0;
+    
+    foreach ($cart_product_ids as $pid => $qty) {
+        foreach ($products as $p) {
+            if ($p['id'] == $pid) {
+                 $subtotal += $p['price'] * $qty;
+                 $total_quantity += $qty;
+                 break;
+            }
+        }
+    }
+    
+    // Calculate Discount
+    $discount = 0;
+    if ($total_quantity > 0 && $total_quantity % 2 === 0) {
+        $discount_percentage = min($total_quantity, 50);
+        $discount = ($subtotal * $discount_percentage) / 100;
+    }
+    
+    // Calculate Shipping Cost
+    // We assume the method passed is valid or default to 0/Standard if strictly needed for calculation context?
+    // Cost logic repeats mainly because $shipping_options isn't available here yet.
+    // I'll replicate the switch.
+    $cost = 0;
+    switch($method) {
+        case 'standard': 
+            $cost = 40; 
+            break;
+        case 'express': 
+            $cost = min(80, $subtotal * 0.10); 
+            break;
+        case 'white_glove': 
+            $cost = min(150, $subtotal * 0.05); 
+            break;
+        case 'freight': 
+            $cost = min(200, $subtotal * 0.03); 
+            break;
+        default:
+            $cost = 0; // If invalid or null
+    }
+    
+    // Calculate Tax (18% on Taxable Amount including Shipping)
+    $taxable = ($subtotal - $discount) + $cost;
+    $tax = $taxable * 0.18;
+    
+    // Calculate Total
+    $total = $taxable + $tax;
+    
+    echo json_encode([
+        'success' => true,
+        'shipping_cost' => $cost,
+        'tax' => $tax,
+        'total' => $total,
+        'formatted_shipping' => ($cost == 0) ? 'FREE' : '₹' . number_format($cost),
+        'formatted_tax' => '₹' . number_format($tax),
+        'formatted_total' => '₹' . number_format($total)
+    ]);
+    exit;
+}
+
 // Handle Order Creation (AJAX)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_place_order'])) {
     header('Content-Type: application/json');
@@ -142,16 +220,16 @@ $shipping_options = [
     ]
 ];
 
-// Get selected shipping method (default to standard)
-$selected_shipping = isset($_POST['shipping_method']) ? $_POST['shipping_method'] : 'standard';
+// Get selected shipping method (from Session or null)
+$selected_shipping = $_SESSION['shipping_method'] ?? null;
 
 // Validate shipping method
-if (!isset($shipping_options[$selected_shipping])) {
-    $selected_shipping = 'standard';
+if ($selected_shipping && !isset($shipping_options[$selected_shipping])) {
+    $selected_shipping = null;
 }
 
-// Calculate shipping cost
-$shipping = $shipping_options[$selected_shipping]['cost'];
+// Calculate shipping cost (0 if no selection)
+$shipping = ($selected_shipping) ? $shipping_options[$selected_shipping]['cost'] : 0;
 
 // Calculate total quantity for discount
 $total_quantity = 0;
@@ -167,12 +245,12 @@ if ($total_quantity > 0 && $total_quantity % 2 === 0) {
     $discount = ($subtotal * $discount_percentage) / 100;
 }
 
-// Calculate Tax (18% on Subtotal - Discount)
-$taxable_amount = ($subtotal - $discount);
+// Calculate Tax (18% on Subtotal - Discount + Shipping)
+$taxable_amount = ($subtotal - $discount) + $shipping;
 $tax = $taxable_amount * 0.18;
 
 // Calculate Final Total
-$total = $taxable_amount + $tax + $shipping;
+$total = $taxable_amount + $tax;
 
 // Include header
 include 'includes/header.php';
@@ -362,15 +440,15 @@ include 'includes/header.php';
                         <?php endif; ?>
 
                         <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                            <span style="color: var(--text-secondary);">GST (18%)</span>
-                            <span id="tax-value">₹<?php echo number_format($tax); ?></span>
-                        </div>
-
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
                             <span style="color: var(--text-secondary);">Shipping</span>
                             <span id="shipping-value" style="<?php echo ($shipping == 0) ? 'color: var(--success);' : ''; ?>">
                                 <?php echo ($shipping == 0) ? 'FREE' : '₹' . number_format($shipping); ?>
                             </span>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                            <span style="color: var(--text-secondary);">GST (18%)</span>
+                            <span id="tax-value">₹<?php echo number_format($tax); ?></span>
                         </div>
 
                         <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border);">

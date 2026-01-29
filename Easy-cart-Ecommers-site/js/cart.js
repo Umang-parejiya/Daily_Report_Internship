@@ -48,43 +48,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                 display.textContent = data.newQty;
                             }
 
-                            // Update globals
-                            const summaryTable = document.querySelector('.table-container table');
-                            if (summaryTable) {
-                                // Subtotal (row 0)  Calculate total quantity discount even logic
-                                summaryTable.rows[0].cells[1].textContent = `₹${data.newSubtotal}`;
-
-                                // Handle discount row dynamically
-                                let discountRow = summaryTable.querySelector('tr[data-discount-row]');
-
-                                if (data.hasDiscount) {
-                                    if (!discountRow) {
-                                        // Create discount row if it doesn't exist
-                                        discountRow = summaryTable.insertRow(2); // Insert before Total row
-                                        discountRow.setAttribute('data-discount-row', 'true');
-                                        discountRow.innerHTML = `
-                                            <td style="padding: 0.5rem 0; border: none; color: var(--success);">
-                                                Discount (<span class="discount-percentage"></span>% off based on even quantity)
-                                            </td>
-                                            <td style="padding: 0.5rem 0; border: none; text-align: right; font-weight: 600; color: var(--success);">
-                                                -₹<span class="discount-amount"></span>
-                                            </td>
-                                        `;
-                                    }
-                                    // Update discount values
-                                    discountRow.querySelector('.discount-percentage').textContent = data.discountPercentage;
-                                    discountRow.querySelector('.discount-amount').textContent = data.newDiscount;
-                                } else {
-                                    // Remove discount row if it exists and discount is 0
-                                    if (discountRow) {
-                                        discountRow.remove();
-                                    }
-                                }
-
-                                // Total (last row)
-                                const totalRow = summaryTable.rows[summaryTable.rows.length - 1];
-                                totalRow.cells[1].innerHTML = `<strong style="font-size: 1.1rem; color: var(--accent);">₹${data.newTotal}</strong>`;
-                            }
+                            // Update Summary
+                            updateCartSummary(data);
                         }
                     })
                     .catch(err => console.error('Cart update failed:', err));
@@ -94,15 +59,72 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Handle Remove Button
     // Handle Remove Button
+    // Handle Remove Button
     const removeButtons = document.querySelectorAll('.remove-btn');
     removeButtons.forEach(btn => {
         btn.addEventListener('click', function (e) {
-            if (!confirm('Are you sure you want to remove this item?')) {
-                e.preventDefault();
-            }
-            // Allow default navigation to cart.php?remove=ID
+            e.preventDefault();
+            if (!confirm('Are you sure you want to remove this item?')) return;
+
+            const url = this.getAttribute('href') + '&ajax_remove=1';
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        this.closest('.cart-item-card').remove();
+                        if (data.cartCount === 0) {
+                            location.reload();
+                        } else {
+                            updateCartSummary(data);
+
+                            // Update cart count subtitle
+                            const subTitle = document.querySelector('.section-subtitle');
+                            if (subTitle) subTitle.textContent = `You have ${data.cartCount} item(s) in your cart`;
+                        }
+                    }
+                })
+                .catch(err => console.error(err));
         });
     });
+
+    // Helper to update summary table
+    function updateCartSummary(data) {
+        const summaryTable = document.querySelector('.table-container table');
+        if (summaryTable) {
+            // Subtotal
+            summaryTable.rows[0].cells[1].textContent = `₹${data.newSubtotal}`;
+
+            // Handle discount row dynamically
+            let discountRow = summaryTable.querySelector('tr[data-discount-row]');
+
+            if (data.hasDiscount) {
+                if (!discountRow) {
+                    // Create discount row if it doesn't exist
+                    // Insert before Total row (check index, usually last)
+                    // Rows check: 0=Subtotal, 1=Delivery, 2=Total. Insert at 2.
+                    const targetIndex = summaryTable.rows.length - 1;
+                    discountRow = summaryTable.insertRow(targetIndex);
+                    discountRow.setAttribute('data-discount-row', 'true');
+                    discountRow.innerHTML = `
+                        <td style="padding: 0.5rem 0; border: none; color: var(--success);">
+                            Discount (<span class="discount-percentage"></span>% off based on even quantity)
+                        </td>
+                        <td style="padding: 0.5rem 0; border: none; text-align: right; font-weight: 600; color: var(--success);">
+                            -₹<span class="discount-amount"></span>
+                        </td>
+                    `;
+                }
+                discountRow.querySelector('.discount-percentage').textContent = data.discountPercentage;
+                discountRow.querySelector('.discount-amount').textContent = data.newDiscount;
+            } else {
+                if (discountRow) discountRow.remove();
+            }
+
+            // Total
+            const totalRow = summaryTable.rows[summaryTable.rows.length - 1];
+            totalRow.cells[1].innerHTML = `<strong style="font-size: 1.1rem; color: var(--accent);">₹${data.newTotal}</strong>`;
+        }
+    }
 
     function updateTotals() {
         let newSubtotal = 0;

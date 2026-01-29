@@ -60,8 +60,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Password Logic
             clearError(passwordInput);
+            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
             if (!passwordInput.value) {
                 showError(passwordInput, 'Password is required');
+                isValid = false;
+            } else if (!passwordRegex.test(passwordInput.value)) {
+                showError(passwordInput, 'Password must contain 8+ chars, Uppercase, Lowercase, Number & Special Char');
                 isValid = false;
             }
 
@@ -170,8 +175,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Password Validation
             clearError(passwordInput);
-            if (passwordInput.value.length < 8) {
-                showError(passwordInput, 'Password must be at least 8 characters');
+            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+            if (!passwordInput.value) {
+                showError(passwordInput, 'Password is required');
+                isValid = false;
+            } else if (!passwordRegex.test(passwordInput.value)) {
+                showError(passwordInput, 'Password must contain 8+ chars, Uppercase, Lowercase, Number & Special Char');
                 isValid = false;
             }
 
@@ -266,18 +276,42 @@ document.addEventListener('DOMContentLoaded', function () {
                     input.style.borderColor = '';
                 };
 
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
                 requiredInputs.forEach(input => {
                     clearError(input);
-                    if (!input.value.trim()) {
+                    const val = input.value.trim();
+                    const label = input.previousElementSibling ? input.previousElementSibling.textContent : '';
+
+                    if (!val) {
                         showError(input);
                         isValid = false;
-                    }
+                    } else {
+                        // Email Validation
+                        if (input.type === 'email') {
+                            if (!emailRegex.test(val)) {
+                                input.style.borderColor = '#ef4444';
+                                isValid = false;
+                            }
+                        }
 
-                    // Specific validations
-                    if (input.placeholder === '10001' || input.previousElementSibling.textContent.includes('Postal')) {
-                        if (!/^\d+$/.test(input.value.trim()) || input.value.trim().length < 5) {
-                            showError(input);
-                            isValid = false;
+                        // Phone Validation
+                        if (input.type === 'tel' || label.includes('Phone')) {
+                            // Validate phone: Allow digits, spaces, -, +, ( )
+                            // Must have at least 10 digits
+                            const digits = val.replace(/\D/g, '');
+                            if (digits.length < 10) {
+                                input.style.borderColor = '#ef4444';
+                                isValid = false;
+                            }
+                        }
+
+                        // Postal Code Validation
+                        if (input.placeholder === '10001' || label.includes('Postal')) {
+                            if (!/^\d+$/.test(val) || val.length < 5) {
+                                input.style.borderColor = '#ef4444';
+                                isValid = false;
+                            }
                         }
                     }
                 });

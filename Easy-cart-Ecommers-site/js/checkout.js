@@ -34,41 +34,40 @@ document.addEventListener('DOMContentLoaded', function () {
                     card.style.borderColor = 'var(--primary)';
                     card.style.background = 'var(--bg-accent)';
 
-                    // 2. Update Shipping Text & Total
-                    const priceText = card.querySelector('.card-price').textContent.trim();
-                    const shippingCost = parsePrice(priceText);
-                    const subtotal = parsePrice(subtotalElement.textContent);
+                    // 2. AJAX Update Shipping & Totals
+                    const selectedMethod = input.value;
+                    const formData = new FormData();
+                    formData.append('ajax_update_shipping', '1');
+                    formData.append('shipping_method', selectedMethod);
 
-                    // Update Shipping Display
-                    if (shippingCost === 0) {
-                        shippingElement.textContent = 'FREE';
-                        shippingElement.style.color = 'var(--success)';
-                    } else {
-                        shippingElement.textContent = formatPrice(shippingCost);
-                        shippingElement.style.color = '';
-                    }
+                    // Visual feedback
+                    if (totalElement) totalElement.style.opacity = '0.5';
 
-                    // Check for discount based on quantity
-                    const discountElement = document.getElementById('discount-value');
-                    let discount = 0;
-                    if (discountElement) {
-                        // Use data-value for precision, fallback to text parsing
-                        discount = parseFloat(discountElement.getAttribute('data-value')) || parsePrice(discountElement.textContent);
-                    }
+                    fetch('checkout.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                if (shippingElement) {
+                                    shippingElement.textContent = data.formatted_shipping;
+                                    shippingElement.style.color = (data.shipping_cost == 0) ? 'var(--success)' : '';
+                                }
 
-                    // Calculate Tax (18%) on (Subtotal - Discount)
-                    // Shipping is added AFTER tax
-                    const taxableAmount = subtotal - discount;
-                    const taxAmount = Math.round(taxableAmount * 0.18);
+                                const taxElement = document.getElementById('tax-value');
+                                if (taxElement) taxElement.textContent = data.formatted_tax;
 
-                    const taxElement = document.getElementById('tax-value');
-                    if (taxElement) {
-                        taxElement.textContent = formatPrice(taxAmount);
-                    }
-
-                    // Update Total Display (Subtotal - Discount + Tax + Shipping)
-                    const newTotal = taxableAmount + taxAmount + shippingCost;
-                    totalElement.textContent = formatPrice(newTotal);
+                                if (totalElement) {
+                                    totalElement.textContent = data.formatted_total;
+                                    totalElement.style.opacity = '1';
+                                }
+                            }
+                        })
+                        .catch(e => {
+                            console.error('Shipping update failed', e);
+                            if (totalElement) totalElement.style.opacity = '1';
+                        });
 
                 } else {
                     card.classList.remove('active');
