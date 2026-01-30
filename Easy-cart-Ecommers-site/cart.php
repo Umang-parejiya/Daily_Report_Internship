@@ -40,10 +40,32 @@ if (isset($_GET['remove'])) {
         $discount = 0;
         $discount_percentage = 0;
         if ($total_quantity > 0 && $total_quantity % 2 === 0) {
-            $discount_percentage = min($total_quantity, 50);   // 50% max discount
+            $discount_percentage = min($total_quantity, 50);
             $discount = ($subtotal * $discount_percentage) / 100;
         }
         
+        // [Phase 5] Determine Cart Type
+        // Rule: If ANY item is 'freight' OR Subtotal > 300 => Cart is Freight
+        $has_freight = false;
+        foreach ($cart_counts as $id => $qty) {
+            foreach ($products as $p) {
+                if ($p['id'] === $id) {
+                    if (isset($p['shipping_type']) && $p['shipping_type'] === 'freight') {
+                        $has_freight = true;
+                    }
+                    break;
+                }
+            }
+        }
+        
+        $cart_type = 'express'; // Default
+        if ($has_freight) {
+            $cart_type = 'freight';
+        } elseif ($subtotal >= 300) {
+            $cart_type = 'freight'; // Price threshold trigger
+        }
+        $_SESSION['cart_type'] = $cart_type;
+
         $total = $subtotal - $discount;
         
         echo json_encode([
@@ -53,7 +75,8 @@ if (isset($_GET['remove'])) {
             'newDiscount' => number_format($discount),
             'discountPercentage' => $discount_percentage,
             'hasDiscount' => ($discount > 0),
-            'newTotal' => number_format($total)
+            'newTotal' => number_format($total),
+            'cartType' => ucfirst($cart_type)
         ]);
         exit;
     }
@@ -108,6 +131,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_
             $discount = ($subtotal * $discount_percentage) / 100;
         }
         
+        // [Phase 5] Determine Cart Type (AJAX Update)
+        // Re-evaluate rules on quantity change (Subtotal change might flip Express -> Freight)
+        $has_freight = false;
+        foreach ($cart_counts as $id => $qty) {
+            foreach ($products as $p) {
+                if ($p['id'] === $id) {
+                     if (isset($p['shipping_type']) && $p['shipping_type'] === 'freight') {
+                        $has_freight = true;
+                    }
+                    break;
+                }
+            }
+        }
+
+        $cart_type = 'express';
+        if ($has_freight) {
+            $cart_type = 'freight';
+        } elseif ($subtotal >= 300) {
+            $cart_type = 'freight';
+        }
+        $_SESSION['cart_type'] = $cart_type;
+        
         $total = $subtotal - $discount;
         
         echo json_encode([
@@ -119,6 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_
             'discountPercentage' => $discount_percentage,
             'hasDiscount' => ($discount > 0),
             'newTotal' => number_format($total),
+            'cartType' => ucfirst($cart_type),
             'removed' => ($new_qty === 0)
         ]);
         exit;
@@ -174,6 +220,27 @@ if ($total_quantity > 0 && $total_quantity % 2 === 0) {
     $discount_percentage = min($total_quantity, 50);
     $discount = ($subtotal * $discount_percentage) / 100;
 }
+
+// [Phase 5] Determine Cart Type (Page Load)
+$has_freight = false;
+foreach ($cart_items as $item) {
+    foreach($products as $p) {
+        if ($p['id'] === $item['id']) {
+            if (isset($p['shipping_type']) && $p['shipping_type'] === 'freight') {
+                $has_freight = true;
+            }
+            break;
+        }
+    }
+}
+
+$cart_type = 'express';
+if ($has_freight) {
+    $cart_type = 'freight';
+} elseif ($subtotal >= 300) {
+    $cart_type = 'freight';
+}
+$_SESSION['cart_type'] = $cart_type;
 
 // Total (shipping calculated at checkout)
 $total = $subtotal - $discount;
@@ -288,9 +355,9 @@ include 'includes/header.php';
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 0.5rem 0; border: none; color: var(--text-secondary);">Delivery Chagres</td>
-                                        <td style="padding: 0.5rem 0; border: none; text-align: right; font-style: italic; color: var(--text-secondary);">
-                                            Calculated at checkout
+                                        <td style="padding: 0.5rem 0; border: none; color: var(--text-secondary);">Delivery Type</td>
+                                        <td style="padding: 0.5rem 0; border: none; text-align: right; font-style: italic; color: <?php echo ($cart_type === 'express') ? '#10b981' : '#f59e0b'; ?>;" id="delivery-type-label">
+                                            Your delivery is <?php echo ucfirst($cart_type); ?> Delivery
                                         </td>
                                     </tr>
                                     <!-- Calculate total quantity discount even logic -->

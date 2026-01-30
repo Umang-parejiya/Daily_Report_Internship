@@ -68,6 +68,11 @@ include 'includes/header.php';
                             <?php echo htmlspecialchars($product['name']); ?>
                         </a>
                         <div class="product-price">₹<?php echo number_format($product['price']); ?></div>
+                        <?php if(isset($product['shipping_type'])): ?>
+                            <div style="font-size: 0.8rem; color: <?php echo ($product['shipping_type'] === 'express') ? '#10b981' : '#f59e0b'; ?>; margin-bottom: 0.5rem; font-weight: 500;">
+                                ✔ <?php echo ucfirst($product['shipping_type']); ?> Delivery
+                            </div>
+                        <?php endif; ?>
                         <a href="pdp.php?id=<?php echo $product['id']; ?>" class="btn btn-secondary">View Details</a>
                     </div>
                 </div>

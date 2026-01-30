@@ -134,6 +134,13 @@ include 'includes/header.php';
                             <?php echo htmlspecialchars($product['brand']); ?>
                         </a>
                     </p>
+                    <?php if(isset($product['shipping_type'])): ?>
+                    <p style="margin-top: 0.5rem;">
+                        <span style="font-weight: 600; color: <?php echo ($product['shipping_type'] === 'express') ? '#10b981' : '#f59e0b'; ?>;">
+                            ✔ <?php echo ucfirst($product['shipping_type']); ?> Delivery
+                        </span>
+                    </p>
+                    <?php endif; ?>
                 </div>
 
                 <form method="POST" action="">

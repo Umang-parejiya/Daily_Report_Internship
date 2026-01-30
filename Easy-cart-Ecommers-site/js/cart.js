@@ -58,8 +58,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Handle Remove Button
-    // Handle Remove Button
-    // Handle Remove Button
     const removeButtons = document.querySelectorAll('.remove-btn');
     removeButtons.forEach(btn => {
         btn.addEventListener('click', function (e) {
@@ -118,6 +116,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 discountRow.querySelector('.discount-amount').textContent = data.newDiscount;
             } else {
                 if (discountRow) discountRow.remove();
+            }
+
+            // [Phase 5] Update Delivery Type Label dynamically based on new cart state
+            const deliveryLabel = document.getElementById('delivery-type-label');
+            if (deliveryLabel && data.cartType) {
+                deliveryLabel.textContent = `Your delivery is ${data.cartType} Delivery`;
+                const isExpress = data.cartType.toLowerCase() === 'express';
+                deliveryLabel.style.color = isExpress ? '#10b981' : '#f59e0b';
             }
 
             // Total

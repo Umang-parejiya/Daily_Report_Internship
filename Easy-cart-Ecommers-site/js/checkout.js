@@ -34,7 +34,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     card.style.borderColor = 'var(--primary)';
                     card.style.background = 'var(--bg-accent)';
 
-                    // 2. AJAX Update Shipping & Totals
+                    // 2. [Phase 4/5] AJAX Update Shipping & Totals
+                    // Recalculates tax, shipping cost, and final total on server side
                     const selectedMethod = input.value;
                     const formData = new FormData();
                     formData.append('ajax_update_shipping', '1');

@@ -220,16 +220,28 @@ $shipping_options = [
     ]
 ];
 
+// -------------------------------------------------------------------
+// [Phase 5] Shipping Logic: Determine Valid Shipping Methods
+// -------------------------------------------------------------------
 // Get selected shipping method (from Session or null)
 $selected_shipping = $_SESSION['shipping_method'] ?? null;
+// Retrieve Cart Type determined in cart.php (defaults to 'express' if missing)
+$cart_type = $_SESSION['cart_type'] ?? 'express';
 
-// Validate shipping method
-if ($selected_shipping && !isset($shipping_options[$selected_shipping])) {
-    $selected_shipping = null;
+// Define valid methods per type based on business rules:
+// - Freight Cart: Only White Glove & Freight allowed
+// - Express Cart: Only Standard & Express allowed
+$valid_methods = ($cart_type === 'freight') ? ['white_glove', 'freight'] : ['standard', 'express'];
+
+// Validate shipping method against valid list. If invalid (e.g. user refreshed or session persisted invalid type), reset to default.
+if (!$selected_shipping || !in_array($selected_shipping, $valid_methods)) {
+    // Auto-select default: Standard for Express, Freight for Freight
+    $selected_shipping = ($cart_type === 'freight') ? 'freight' : 'standard';
+    $_SESSION['shipping_method'] = $selected_shipping;
 }
 
-// Calculate shipping cost (0 if no selection)
-$shipping = ($selected_shipping) ? $shipping_options[$selected_shipping]['cost'] : 0;
+// Calculate shipping cost based on the VALID selected method
+$shipping = $shipping_options[$selected_shipping]['cost'];
 
 // Calculate total quantity for discount
 $total_quantity = 0;
@@ -327,12 +339,27 @@ include 'includes/header.php';
                     <form method="POST" action="" id="shippingForm">
                         <div class="selection-grid">
                             <?php foreach ($shipping_options as $key => $option): ?>
-                            <label class="selection-card">
+                            <?php 
+                                // [Phase 5] UI Logic: Disable invalid options
+                                // Check if this option is valid for the current Cart Type
+                                $is_valid = in_array($key, $valid_methods);
+                                $disabled = !$is_valid;
+                                $opacity = $disabled ? '0.5' : '1';
+                                $cursor = $disabled ? 'not-allowed' : 'pointer';
+                            ?>
+                            <label class="selection-card" style="opacity: <?php echo $opacity; ?>; cursor: <?php echo $cursor; ?>;">
                                 <input type="radio" name="shipping_method" value="<?php echo $key; ?>" 
-                                       <?php echo ($selected_shipping === $key) ? 'checked' : ''; ?>>
+                                       <?php echo ($selected_shipping === $key) ? 'checked' : ''; ?>
+                                       <?php echo $disabled ? 'disabled' : ''; // Prevent selection ?> >
                                 <div class="card-content">
                                     <div class="card-icon"><?php echo $option['icon']; ?></div>
-                                    <div class="card-title"><?php echo $option['name']; ?></div>
+                                    <div class="card-title">
+                                        <?php echo $option['name']; ?>
+                                        <?php if(!$is_valid): ?>
+                                            <!-- Inform user why it's disabled -->
+                                            <span style="font-size:0.7em; color:var(--error);">(<?php echo ucfirst($cart_type); ?> Only)</span>
+                                        <?php endif; ?>
+                                    </div>
                                     <div class="card-desc"><?php echo $option['delivery']; ?></div>
                                     <div class="card-price">
                                         <?php echo ($option['cost'] > 0) ? '₹' . number_format($option['cost']) : 'FREE'; ?>
