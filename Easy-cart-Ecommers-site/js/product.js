@@ -88,20 +88,23 @@ document.addEventListener('DOMContentLoaded', function () {
                             void banner.offsetWidth; // Force reflow
                             banner.classList.add('visible');
                         }
-                        addToCartBtn.textContent = '✔ Added';
+
+                        // Update button text permanently to indicate item is in cart
+                        addToCartBtn.textContent = 'More Item Add';
+                        addToCartBtn.disabled = false;
                     } else {
                         alert('Error: ' + data.message);
+                        // Revert on error
+                        addToCartBtn.textContent = originalText;
+                        addToCartBtn.disabled = false;
                     }
                 })
                 .catch(err => {
                     console.error(err);
                     alert('Something went wrong');
-                })
-                .finally(() => {
-                    setTimeout(() => {
-                        addToCartBtn.textContent = originalText;
-                        addToCartBtn.disabled = false;
-                    }, 2000);
+                    // Revert on error
+                    addToCartBtn.textContent = originalText;
+                    addToCartBtn.disabled = false;
                 });
         });
     }

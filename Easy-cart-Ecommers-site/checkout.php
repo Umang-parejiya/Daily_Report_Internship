@@ -18,7 +18,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_update_shipping'
     }
 
     // Save Selection to Session
-    $method = $_POST['shipping_method'] ?? null;
+    $received_id = $_POST['selectedMethod'] ?? $_POST['shipping_method'] ?? null;
+    
+    // Map numerical IDs back to method keys
+    $id_to_key_map = [
+        '1' => 'standard',
+        '2' => 'express',
+        '3' => 'white_glove',
+        '4' => 'freight'
+    ];
+    
+    $method = $id_to_key_map[$received_id] ?? null;
+    
     if ($method) {
         $_SESSION['shipping_method'] = $method;
     }
@@ -195,24 +206,28 @@ foreach ($cart_items as $item) {
 // Shipping options with dynamic cost calculation (Phase 4 Rules)
 $shipping_options = [
     'standard' => [
+        'id' => 1,
         'name' => 'Standard Shipping', 
         'cost' => 40,
         'delivery' => 'Flat ₹40 ',
         'icon' => '🚚'
     ],
     'express' => [
+        'id' => 2,
         'name' => 'Express Shipping', 
         'cost' => min(80, $subtotal * 0.10),
         'delivery' => 'Flat ₹80 OR 10% of subtotal (whichever is lower) ',
         'icon' => '⚡'
     ],
     'white_glove' => [
+        'id' => 3,
         'name' => 'White Glove Delivery', 
         'cost' => min(150, $subtotal * 0.05),
         'delivery' => 'Flat ₹150 OR 5% of subtotal (whichever is lower) ',
         'icon' => '🧤'
     ],
     'freight' => [
+        'id' => 4,
         'name' => 'Freight Shipping', 
         'cost' => min(200, $subtotal * 0.03),
         'delivery' => '3% of subtotal OR Minimum $200',
@@ -348,7 +363,7 @@ include 'includes/header.php';
                                 $cursor = $disabled ? 'not-allowed' : 'pointer';
                             ?>
                             <label class="selection-card" style="opacity: <?php echo $opacity; ?>; cursor: <?php echo $cursor; ?>;">
-                                <input type="radio" name="shipping_method" value="<?php echo $key; ?>" 
+                                <input type="radio" name="shipping_method" value="<?php echo $option['id']; ?>" 
                                        <?php echo ($selected_shipping === $key) ? 'checked' : ''; ?>
                                        <?php echo $disabled ? 'disabled' : ''; // Prevent selection ?> >
                                 <div class="card-content">

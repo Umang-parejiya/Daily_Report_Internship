@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const selectedMethod = input.value;
                     const formData = new FormData();
                     formData.append('ajax_update_shipping', '1');
-                    formData.append('shipping_method', selectedMethod);
+                    formData.append('selectShipping_id', selectShipping_id);
 
                     // Visual feedback
                     if (totalElement) totalElement.style.opacity = '0.5';
