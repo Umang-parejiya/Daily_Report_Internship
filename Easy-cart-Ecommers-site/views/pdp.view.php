@@ -79,11 +79,6 @@
                     <button type="submit" name="add_to_cart" class="btn btn-primary"
                         style="width: 100%; padding: 1rem; font-size: 1rem;">
                         <?php 
-                            // Check if product is in cart
-                            $in_cart = false;
-                            if (isset($_SESSION['cart']) && in_array($product['id'], $_SESSION['cart'])) {
-                                $in_cart = true;
-                            }
                             echo $in_cart ? 'More Item Add' : 'Add to Cart'; 
                         ?>
                     </button>

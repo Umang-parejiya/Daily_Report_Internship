@@ -1,42 +1,48 @@
 <?php
-session_start();
+/**
+ * cart.php
+ * Overhauled to use database-only cart storage.
+ */
+require_once 'config/session.php';
+require_once 'config/db.php';
+
 $current_page = 'cart';
 $page_title = 'Easy-Cart - My Cart';
 
-require_once 'data/products.php';
+// 1. Identify User/Guest and find Cart ID
+$userId = $_SESSION['user_id'] ?? null;
+$guestUserId = $_SESSION['guest_user_id'] ?? null;
+$cartId = null;
+
+if ($userId) {
+    $stmt = $pdo->prepare("SELECT cart_id FROM sales_cart WHERE user_id = ? ORDER BY created_at DESC LIMIT 1");
+    $stmt->execute([$userId]);
+    $cartId = $stmt->fetchColumn();
+} else if ($guestUserId) {
+    $stmt = $pdo->prepare("SELECT cart_id FROM sales_cart WHERE guest_user_id = ? ORDER BY created_at DESC LIMIT 1");
+    $stmt->execute([$guestUserId]);
+    $cartId = $stmt->fetchColumn();
+}
 
 // --- HANDLE CART ACTIONS ---
 
 // 1. Remove Item
-if (isset($_GET['remove'])) {
+if (isset($_GET['remove']) && $cartId) {
     $remove_id = intval($_GET['remove']);
-    // Remove all instances of this ID
-    if (isset($_SESSION['cart'])) {
-        $_SESSION['cart'] = array_filter($_SESSION['cart'], function($id) use ($remove_id) {
-            return $id != $remove_id;
-        });
-        $_SESSION['cart'] = array_values($_SESSION['cart']); // Re-index
-    }
+    $pdo->prepare("DELETE FROM sales_cart_items WHERE cart_id = ? AND product_id = ? AND status = 'active'")->execute([$cartId, $remove_id]);
 
-    // AJAX Response
     if (isset($_GET['ajax_remove'])) {
         header('Content-Type: application/json');
-
-        // Recalculate totals
-        $cart_counts = array_count_values($_SESSION['cart']);
         
-        // Calculate subtotal
-        $subtotal = 0;
-        foreach ($cart_counts as $id => $qty) {
-            foreach ($products as $p) {
-                if ($p['id'] === $id) {
-                    $subtotal += $p['price'] * $qty;
-                }
-            }
-        }
+        // Fetch new totals
+        $stmtTotals = $pdo->prepare("SELECT SUM(quantity) as count, SUM(subtotal) as subtotal FROM sales_cart_items WHERE cart_id = ? AND status = 'active'");
+        $stmtTotals->execute([$cartId]);
+        $totals = $stmtTotals->fetch();
         
-        // Calculate total quantity and discount
-        $total_quantity = array_sum($cart_counts);
+        $subtotal = $totals['subtotal'] ?? 0;
+        $total_quantity = $totals['count'] ?? 0;
+        
+        // Calculate Discount
         $discount = 0;
         $discount_percentage = 0;
         if ($total_quantity > 0 && $total_quantity % 2 === 0) {
@@ -44,176 +50,130 @@ if (isset($_GET['remove'])) {
             $discount = ($subtotal * $discount_percentage) / 100;
         }
         
-        // [Phase 5] Determine Cart Type
-        // Rule: If ANY item is 'freight' OR Subtotal > 300 => Cart is Freight
-        $has_freight = false;
-        foreach ($cart_counts as $id => $qty) {
-            foreach ($products as $p) {
-                if ($p['id'] === $id) {
-                    if (isset($p['shipping_type']) && $p['shipping_type'] === 'freight') {
-                        $has_freight = true;
-                    }
-                    break;
-                }
-            }
-        }
+        // Determine Shipping Type (Fetch remaining items)
+        $stmtShipping = $pdo->prepare("SELECT p.shipping_type FROM sales_cart_items ci JOIN catalog_product_entity p ON ci.product_id = p.entity_id WHERE ci.cart_id = ? AND ci.status = 'active'");
+        $stmtShipping->execute([$cartId]);
+        $shipping_types = $stmtShipping->fetchAll(PDO::FETCH_COLUMN);
         
-        $cart_type = 'express'; // Default
-        if ($has_freight) {
-            $cart_type = 'freight';
-        } elseif ($subtotal >= 300) {
-            $cart_type = 'freight'; // Price threshold trigger
-        }
-        $_SESSION['cart_type'] = $cart_type;
+        $has_freight = in_array('freight', $shipping_types);
+        $cart_type = ($has_freight || $subtotal >= 300) ? 'freight' : 'express';
 
-        $total = $subtotal - $discount;
-        
         echo json_encode([
             'success' => true,
-            'cartCount' => count($_SESSION['cart']),
+            'cartCount' => (int)$total_quantity,
             'newSubtotal' => number_format($subtotal),
             'newDiscount' => number_format($discount),
             'discountPercentage' => $discount_percentage,
             'hasDiscount' => ($discount > 0),
-            'newTotal' => number_format($total),
+            'newTotal' => number_format($subtotal - $discount),
             'cartType' => ucfirst($cart_type)
         ]);
         exit;
     }
-
     header('Location: cart.php');
     exit;
 }
 
-// 2. Update Quantity (Add/Subtract) - JSON/AJAX Support
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_POST['product_id'])) {
+// 2. Update Quantity (Increase/Decrease)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_POST['product_id']) && $cartId) {
     $action = $_POST['action'];
     $pid = intval($_POST['product_id']);
     
-    // Perform modification
     if ($action === 'increase') {
-        $_SESSION['cart'][] = $pid;
-    } elseif ($action === 'decrease') {
-        if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
-            $_SESSION['cart'] = [];
-        }
-        $key = array_search($pid, $_SESSION['cart']);
-        if ($key !== false) {
-            unset($_SESSION['cart'][$key]);
-            $_SESSION['cart'] = array_values($_SESSION['cart']); 
-        }
+        $pdo->prepare("UPDATE sales_cart_items SET quantity = quantity + 1, subtotal = price * (quantity + 1) WHERE cart_id = ? AND product_id = ? AND status = 'active'")->execute([$cartId, $pid]);
+    } else if ($action === 'decrease') {
+        $pdo->prepare("UPDATE sales_cart_items SET quantity = GREATEST(0, quantity - 1), subtotal = price * GREATEST(0, quantity - 1) WHERE cart_id = ? AND product_id = ? AND status = 'active'")->execute([$cartId, $pid]);
+        // Remove item if quantity reached 0
+        $pdo->prepare("DELETE FROM sales_cart_items WHERE cart_id = ? AND product_id = ? AND quantity = 0 AND status = 'active'")->execute([$cartId, $pid]);
     }
 
-    // If AJAX request, return new state
     if (isset($_POST['ajax_update'])) {
         header('Content-Type: application/json');
         
-        // Recalculate totals
-        $cart_counts = array_count_values($_SESSION['cart']);
-        $new_qty = isset($cart_counts[$pid]) ? $cart_counts[$pid] : 0;
+        // Fetch specific item qty
+        $stmtItem = $pdo->prepare("SELECT quantity FROM sales_cart_items WHERE cart_id = ? AND product_id = ? AND status = 'active'");
+        $stmtItem->execute([$cartId, $pid]);
+        $new_qty = $stmtItem->fetchColumn() ?: 0;
+
+        // Fetch overall totals
+        $stmtTotals = $pdo->prepare("SELECT SUM(quantity) as count, SUM(subtotal) as subtotal FROM sales_cart_items WHERE cart_id = ? AND status = 'active'");
+        $stmtTotals->execute([$cartId]);
+        $totals = $stmtTotals->fetch();
         
-        // Calculate subtotal
-        $subtotal = 0;
-        foreach ($cart_counts as $id => $qty) {
-            foreach ($products as $p) {
-                if ($p['id'] === $id) {
-                    $subtotal += $p['price'] * $qty;
-                }
-            }
-        }
+        $subtotal = $totals['subtotal'] ?? 0;
+        $total_quantity = $totals['count'] ?? 0;
         
-        // Calculate total quantity and discount
-        $total_quantity = array_sum($cart_counts);
+        // Calculate Discount
         $discount = 0;
         $discount_percentage = 0;
         if ($total_quantity > 0 && $total_quantity % 2 === 0) {
-            $discount_percentage = min($total_quantity, 50);   // 50% max discount
+            $discount_percentage = min($total_quantity, 50);
             $discount = ($subtotal * $discount_percentage) / 100;
         }
         
-        // [Phase 5] Determine Cart Type (AJAX Update)
-        // Re-evaluate rules on quantity change (Subtotal change might flip Express -> Freight)
-        $has_freight = false;
-        foreach ($cart_counts as $id => $qty) {
-            foreach ($products as $p) {
-                if ($p['id'] === $id) {
-                     if (isset($p['shipping_type']) && $p['shipping_type'] === 'freight') {
-                        $has_freight = true;
-                    }
-                    break;
-                }
-            }
-        }
+        // Determine Shipping Type
+        $stmtShipping = $pdo->prepare("SELECT p.shipping_type FROM sales_cart_items ci JOIN catalog_product_entity p ON ci.product_id = p.entity_id WHERE ci.cart_id = ?");
+        $stmtShipping->execute([$cartId]);
+        $shipping_types = $stmtShipping->fetchAll(PDO::FETCH_COLUMN);
+        
+        $has_freight = in_array('freight', $shipping_types);
+        $cart_type = ($has_freight || $subtotal >= 300) ? 'freight' : 'express';
 
-        $cart_type = 'express';
-        if ($has_freight) {
-            $cart_type = 'freight';
-        } elseif ($subtotal >= 300) {
-            $cart_type = 'freight';
-        }
-        $_SESSION['cart_type'] = $cart_type;
-        
-        $total = $subtotal - $discount;
-        
         echo json_encode([
             'success' => true,
             'productId' => $pid,
-            'newQty' => $new_qty,
+            'newQty' => (int)$new_qty,
             'newSubtotal' => number_format($subtotal),
             'newDiscount' => number_format($discount),
             'discountPercentage' => $discount_percentage,
             'hasDiscount' => ($discount > 0),
-            'newTotal' => number_format($total),
+            'newTotal' => number_format($subtotal - $discount),
             'cartType' => ucfirst($cart_type),
             'removed' => ($new_qty === 0)
         ]);
         exit;
     }
-
-    // Fallback for non-AJAX
     header('Location: cart.php');
     exit;
 }
 
 // --- PREPARE DATA FOR DISPLAY ---
-
-// Initialize cart array if not exists
-if (!isset($_SESSION['cart'])) {
-    $_SESSION['cart'] = [];
-}
-
-// Count quantities: [1 => 2, 4 => 1] (Product ID => Qty)
-$cart_counts = array_count_values($_SESSION['cart']);
-
-// Build rich item list
 $cart_items = [];
 $subtotal = 0;
+$total_quantity = 0;
+$has_freight = false;
 
-foreach ($cart_counts as $product_id => $quantity) {
-    // Find product details
-    foreach ($products as $p) {
-        if ($p['id'] === $product_id) {
-            $line_total = $p['price'] * $quantity;
-            $subtotal += $line_total;
-            
-            $cart_items[] = [
-                'id' => $p['id'],
-                'name' => $p['name'],
-                'price' => $p['price'],
-                'image' => $p['image'],
-                'brand' => $p['brand'],
-                'qty' => $quantity,
-                'total' => $line_total
-            ];
-            break; 
+if ($cartId) {
+    $stmtItems = $pdo->prepare("
+        SELECT ci.*, p.shipping_type, p.image as display_image, b.name as brand_name
+        FROM sales_cart_items ci
+        JOIN catalog_product_entity p ON ci.product_id = p.entity_id
+        LEFT JOIN brands b ON ci.brand_id = b.id
+        WHERE ci.cart_id = ? AND ci.status = 'active'
+    ");
+    $stmtItems->execute([$cartId]);
+    $db_items = $stmtItems->fetchAll();
+
+    foreach ($db_items as $item) {
+        $cart_items[] = [
+            'id' => $item['product_id'],
+            'name' => $item['product_name'],
+            'price' => $item['price'],
+            'image' => $item['image_path'] ?: $item['display_image'],
+            'brand' => $item['brand_name'] ?: 'Generic',
+            'qty' => $item['quantity'],
+            'total' => $item['subtotal'],
+            'shipping_type' => $item['shipping_type']
+        ];
+        $subtotal += $item['subtotal'];
+        $total_quantity += $item['quantity'];
+        if ($item['shipping_type'] === 'freight') {
+            $has_freight = true;
         }
     }
 }
 
-// Calculate total quantity discount even logic 
-$total_quantity = array_sum($cart_counts);
-
-// Calculate discount if quantity is even
+// Calculate Discount
 $discount = 0;
 $discount_percentage = 0;
 if ($total_quantity > 0 && $total_quantity % 2 === 0) {
@@ -221,30 +181,10 @@ if ($total_quantity > 0 && $total_quantity % 2 === 0) {
     $discount = ($subtotal * $discount_percentage) / 100;
 }
 
-// [Phase 5] Determine Cart Type (Page Load)
-$has_freight = false;
-foreach ($cart_items as $item) {
-    foreach($products as $p) {
-        if ($p['id'] === $item['id']) {
-            if (isset($p['shipping_type']) && $p['shipping_type'] === 'freight') {
-                $has_freight = true;
-            }
-            break;
-        }
-    }
-}
-
-$cart_type = 'express';
-if ($has_freight) {
-    $cart_type = 'freight';
-} elseif ($subtotal >= 300) {
-    $cart_type = 'freight';
-}
+// Determine Cart Type
+$cart_type = ($has_freight || $subtotal >= 300) ? 'freight' : 'express';
 $_SESSION['cart_type'] = $cart_type;
-
-// Total (shipping calculated at checkout)
 $total = $subtotal - $discount;
 
-// Include view
 include 'views/cart.view.php';
 ?>

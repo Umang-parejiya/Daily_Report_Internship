@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', function () {
             addToCartBtn.textContent = 'Adding...';
             addToCartBtn.disabled = true;
 
-            fetch('pdp.php?id=' + productId, {
+            fetch('pdp?id=' + productId, {
                 method: 'POST',
                 body: formData
             })

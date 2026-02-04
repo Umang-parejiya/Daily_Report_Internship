@@ -35,31 +35,31 @@
                         <div class="checkout-form-grid">
                             <div class="form-group full-width">
                                 <label class="form-label">Email Address</label>
-                                <input type="email" class="form-input" placeholder="john@example.com" required>
+                                <input type="email" name="email" class="form-input" placeholder="john@example.com" required value="<?php echo htmlspecialchars($user['email'] ?? ''); ?>">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">First Name</label>
-                                <input type="text" class="form-input" placeholder="John" required>
+                                <input type="text" name="firstname" class="form-input" placeholder="John" required value="<?php echo htmlspecialchars($user['first_name'] ?? ''); ?>">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Last Name</label>
-                                <input type="text" class="form-input" placeholder="Doe" required>
+                                <input type="text" name="lastname" class="form-input" placeholder="Doe" required value="<?php echo htmlspecialchars($user['last_name'] ?? ''); ?>">
                             </div>
                             <div class="form-group full-width">
                                 <label class="form-label">Address</label>
-                                <input type="text" class="form-input" placeholder="123 Main St" required>
+                                <input type="text" name="street" class="form-input" placeholder="123 Main St" required>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">City</label>
-                                <input type="text" class="form-input" placeholder="New York" required>
+                                <input type="text" name="city" class="form-input" placeholder="New York" required>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Postal Code</label>
-                                <input type="text" class="form-input" placeholder="10001" required>
+                                <input type="text" name="postcode" class="form-input" placeholder="10001" required>
                             </div>
                             <div class="form-group full-width">
                                 <label class="form-label">Phone Number</label>
-                                <input type="tel" class="form-input" placeholder="+1 (555) 000-0000" required>
+                                <input type="tel" name="telephone" class="form-input" placeholder="+1 (555) 000-0000" required>
                             </div>
                         </div>
                     </form>
@@ -158,7 +158,7 @@
                     </p>
                 </div>
 
-                <button class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem;">
+                <button id="complete-order-btn" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1rem;">
                     Complete Order
                 </button>
             </div>

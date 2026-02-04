@@ -14,11 +14,6 @@ try {
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
     
-    // Optional: Uncomment to test connection
-    // echo "Connected successfully"; 
 } catch (PDOException $e) {
     die("Connection failed: " . $e->getMessage());
 }
-        echo "success"
-
-?>

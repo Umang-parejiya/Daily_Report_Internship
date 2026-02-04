@@ -1,54 +1,58 @@
 <?php
-// Checkout Page - checkout.php
-session_start();
+/**
+ * checkout.php
+ * Overhauled to use official sales_order tables and soft-deactivate cart items.
+ */
+require_once 'config/session.php';
+require_once 'config/db.php';
+require_once 'config/auth.php'; // Enforce login
 
+$userId = $_SESSION['user_id'];
 $current_page = 'cart';
 $page_title = 'Easy-Cart - Checkout';
 
-// Load products data
-require_once 'data/products.php';
+// 0. Fetch Customer Info
+$stmtCust = $pdo->prepare("SELECT first_name, last_name, email FROM users WHERE id = ?");
+$stmtCust->execute([$userId]);
+$user = $stmtCust->fetch();
+
+// 1. Find User Cart ID
+$stmtCart = $pdo->prepare("SELECT cart_id FROM sales_cart WHERE user_id = ? ORDER BY created_at DESC LIMIT 1");
+$stmtCart->execute([$userId]);
+$cartId = $stmtCart->fetchColumn();
+
+// If no cart, redirect back to cart page
+if (!$cartId) {
+    header('Location: cart.php');
+    exit;
+}
+
+// 2. Fetch Active Cart Totals
+$stmtTotals = $pdo->prepare("SELECT SUM(quantity) as count, SUM(subtotal) as subtotal FROM sales_cart_items WHERE cart_id = ? AND status = 'active'");
+$stmtTotals->execute([$cartId]);
+$totals = $stmtTotals->fetch();
+
+$subtotal = $totals['subtotal'] ?? 0;
+$total_quantity = $totals['count'] ?? 0;
+
+if ($total_quantity == 0) {
+    header('Location: cart.php');
+    exit;
+}
 
 // Handle Shipping Update (AJAX)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_update_shipping'])) {
     header('Content-Type: application/json');
     
-    if (!isset($_SESSION['cart']) || empty($_SESSION['cart'])) {
-        echo json_encode(['success' => false, 'message' => 'Cart is empty']);
-        exit;
-    }
-
     // Save Selection to Session
     $received_id = $_POST['selectedMethod'] ?? $_POST['shipping_method'] ?? null;
-    
-    // Map numerical IDs back to method keys
-    $id_to_key_map = [
-        '1' => 'standard',
-        '2' => 'express',
-        '3' => 'white_glove',
-        '4' => 'freight'
-    ];
-    
+    $id_to_key_map = ['1' => 'standard', '2' => 'express', '3' => 'white_glove', '4' => 'freight'];
     $method = $id_to_key_map[$received_id] ?? null;
     
     if ($method) {
         $_SESSION['shipping_method'] = $method;
     }
 
-    // Calculate Subtotal
-    $cart_product_ids = array_count_values($_SESSION['cart']);
-    $subtotal = 0;
-    $total_quantity = 0;
-    
-    foreach ($cart_product_ids as $pid => $qty) {
-        foreach ($products as $p) {
-            if ($p['id'] == $pid) {
-                 $subtotal += $p['price'] * $qty;
-                 $total_quantity += $qty;
-                 break;
-            }
-        }
-    }
-    
     // Calculate Discount
     $discount = 0;
     if ($total_quantity > 0 && $total_quantity % 2 === 0) {
@@ -57,32 +61,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_update_shipping'
     }
     
     // Calculate Shipping Cost
-    // We assume the method passed is valid or default to 0/Standard if strictly needed for calculation context?
-    // Cost logic repeats mainly because $shipping_options isn't available here yet.
-    // I'll replicate the switch.
     $cost = 0;
     switch($method) {
-        case 'standard': 
-            $cost = 40; 
-            break;
-        case 'express': 
-            $cost = min(80, $subtotal * 0.10); 
-            break;
-        case 'white_glove': 
-            $cost = min(150, $subtotal * 0.05); 
-            break;
-        case 'freight': 
-            $cost = min(200, $subtotal * 0.03); 
-            break;
-        default:
-            $cost = 0; // If invalid or null
+        case 'standard': $cost = 40; break;
+        case 'express': $cost = min(80, $subtotal * 0.10); break;
+        case 'white_glove': $cost = min(150, $subtotal * 0.05); break;
+        case 'freight': $cost = min(200, $subtotal * 0.03); break;
     }
     
-    // Calculate Tax (18% on Taxable Amount including Shipping)
     $taxable = ($subtotal - $discount) + $cost;
     $tax = $taxable * 0.18;
-    
-    // Calculate Total
     $total = $taxable + $tax;
     
     echo json_encode([
@@ -101,184 +89,184 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_update_shipping'
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_place_order'])) {
     header('Content-Type: application/json');
     
-    // Simulate Order ID
-    $order_id = mt_rand(100000, 999999);
-    
-    // Calculate total again for security
-    $cart_product_ids = array_count_values($_SESSION['cart']);
-    $order_items = [];
-    $order_total = 0;
-    
-    foreach ($cart_product_ids as $pid => $qty) {
-        foreach ($products as $p) {
-            if ($p['id'] === $pid) {
-                $line_total = $p['price'] * $qty;
-                $order_total += $line_total;
-                $order_items[] = [
-                    'product_id' => $pid,
-                    'quantity' => $qty,
-                    'price' => $p['price']
-                ];
-                break;
+    try {
+        $pdo->beginTransaction();
+
+        // 1. Get Selected Method (Robust Resolution)
+        $id_to_key_map = ['1' => 'standard', '2' => 'express', '3' => 'white_glove', '4' => 'freight'];
+        $received_val = $_POST['selectedMethod'] ?? null;
+        
+        $method = 'standard'; // Default
+        
+        // Try to resolve from POST (ID or Name)
+        if ($received_val) {
+            if (isset($id_to_key_map[$received_val])) {
+                $method = $id_to_key_map[$received_val];
+            } elseif (in_array($received_val, $id_to_key_map)) {
+                $method = $received_val;
             }
+        } 
+        // Fallback to Session if POST failed or wasn't sent
+        elseif (isset($_SESSION['shipping_method'])) {
+            $method = $_SESSION['shipping_method'];
         }
-    }
-    
-    // Calculate total quantity for discount quantity
-    $total_quantity = 0;
-    foreach ($order_items as $item) {
-        $total_quantity += $item['quantity'];
-    }
 
-    // Calculate discount if quantity is even
-    $discount = 0;
-    if ($total_quantity > 0 && $total_quantity % 2 === 0) {
-        $discount_percentage = min($total_quantity, 50);
-        $discount = ($order_total * $discount_percentage) / 100;
-    }
+        // 2. Re-calculate everything to be sure
+        $discount = 0;
+        if ($total_quantity > 0 && $total_quantity % 2 === 0) {
+            $discount_percentage = min($total_quantity, 50);
+            $discount = ($subtotal * $discount_percentage) / 100;
+        }
 
-    // Add Shipping (Simplified based on POST or default)
-    $shipping_cost = isset($_POST['shipping_cost']) ? floatval($_POST['shipping_cost']) : 0;
-    
-    // Calculate Tax (18% on Subtotal - Discount)
-    $taxable = ($order_total - $discount);
-    $tax = $taxable * 0.18;
-    
-    // Final Total
-    $final_total = $taxable + $tax + $shipping_cost;
-    
-    // Create Order Object
-    $new_order = [
-        'order_id' => $order_id,
-        'date' => date('Y-m-d'),
-        'status' => 'Processing',
-        'total' => $final_total,
-        'items' => $order_items
-    ];
-    
-    // Save to Session (Mock Database)
-    if (!isset($_SESSION['orders'])) {
-        $_SESSION['orders'] = [];
+        $shipping_cost = isset($_POST['shipping_cost']) ? floatval($_POST['shipping_cost']) : 0;
+        $order_subtotal = $subtotal; // Use original subtotal before discount
+        $taxable = ($order_subtotal - $discount);
+        $tax = ($taxable + $shipping_cost) * 0.18;
+        $final_total = $taxable + $tax + $shipping_cost;
+
+        // Generate a friendly increment ID
+        $increment_id = '1000' . mt_rand(10, 99) . mt_rand(100, 999);
+
+        // 2.1 Get and Sanitize Input
+        $payment_method = $_POST['payment_method'] ?? 'card';
+        $email = $_POST['email'] ?? $user['email'];
+        $fname = $_POST['firstname'] ?? $user['first_name'];
+        $lname = $_POST['lastname'] ?? $user['last_name'];
+        $street = $_POST['street'] ?? '';
+        $city = $_POST['city'] ?? '';
+        $postcode = $_POST['postcode'] ?? '';
+        $phone = $_POST['telephone'] ?? '';
+        
+        // 2.2 Insert Address (sales_cart_address)
+        $stmtAddress = $pdo->prepare("
+            INSERT INTO sales_cart_address (
+                cart_id, address_type, firstname, lastname, email, street, city, postcode, telephone
+            ) VALUES (?, 'shipping', ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmtAddress->execute([$cartId, $fname, $lname, $email, $street, $city, $postcode, $phone]);
+
+        // 2.3 Insert Shipping Method (sales_cart_shipping)
+        $stmtShippingInsert = $pdo->prepare("
+            INSERT INTO sales_cart_shipping (
+                cart_id, method_code, amount
+            ) VALUES (?, ?, ?)
+        ");
+        $stmtShippingInsert->execute([$cartId, $method, $shipping_cost]);
+
+        // 2.4 Insert Payment Method (sales_cart_payment)
+        $stmtPaymentInsert = $pdo->prepare("
+            INSERT INTO sales_cart_payment (
+                cart_id, method_code
+            ) VALUES (?, ?)
+        ");
+        $stmtPaymentInsert->execute([$cartId, $payment_method]);
+
+        // 3. Create Order in sales_order (Dynamic Data)
+        $stmtOrder = $pdo->prepare("
+            INSERT INTO sales_order (
+                increment_id, status, subtotal, shipping_amount, tax_amount, grand_total,
+                customer_email, customer_firstname, customer_lastname, shipping_method, payment_method, 
+                created_at, updated_at
+            ) VALUES (?, 'processing', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) RETURNING entity_id
+        ");
+        $stmtOrder->execute([
+            $increment_id, 
+            $order_subtotal, 
+            $shipping_cost, 
+            $tax, 
+            $final_total,
+            $email, 
+            $fname, 
+            $lname, 
+            ucfirst($method),
+            ucfirst($payment_method)
+        ]);
+        $order_id = $stmtOrder->fetchColumn();
+
+        // 4. Move Active Items to sales_order_item
+        $stmtActiveItems = $pdo->prepare("
+            SELECT ci.*, p.sku 
+            FROM sales_cart_items ci 
+            JOIN catalog_product_entity p ON ci.product_id = p.entity_id 
+            WHERE ci.cart_id = ? AND ci.status = 'active'
+        ");
+        $stmtActiveItems->execute([$cartId]);
+        $activeItems = $stmtActiveItems->fetchAll();
+
+        $stmtInsertItem = $pdo->prepare("
+            INSERT INTO sales_order_item (
+                order_id, product_id, sku, name, price, quantity, row_total
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        foreach ($activeItems as $item) {
+            $stmtInsertItem->execute([
+                $order_id,
+                $item['product_id'],
+                $item['sku'],
+                $item['product_name'],
+                $item['price'],
+                $item['quantity'],
+                $item['subtotal']
+            ]);
+        }
+
+        // 5. Update Cart Items to Inactive
+        $pdo->prepare("UPDATE sales_cart_items SET status = 'inactive' WHERE cart_id = ? AND status = 'active'")->execute([$cartId]);
+        
+        // 6. Clear Session
+        unset($_SESSION['shipping_method']);
+        unset($_SESSION['cart_type']);
+
+        $pdo->commit();
+        echo json_encode(['success' => true, 'order_id' => $order_id, 'redirect' => 'orders']);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        echo json_encode(['success' => false, 'message' => 'Order failed: ' . $e->getMessage()]);
     }
-    // Prepend new order
-    array_unshift($_SESSION['orders'], $new_order);
-    
-    // Clear Cart
-    unset($_SESSION['cart']);
-    
-    echo json_encode([
-        'success' => true,
-        'order_id' => $order_id,
-        'redirect' => 'orders.php'
-    ]);
     exit;
 }
 
-// Check if cart is empty
-if (!isset($_SESSION['cart']) || count($_SESSION['cart']) === 0) {
-    header('Location: cart.php');
-    exit;
-}
+// Prepare Data for Display
+$stmtItems = $pdo->prepare("SELECT ci.*, p.image FROM sales_cart_items ci JOIN catalog_product_entity p ON ci.product_id = p.entity_id WHERE ci.cart_id = ? AND ci.status = 'active'");
+$stmtItems->execute([$cartId]);
+$db_items = $stmtItems->fetchAll();
 
-// Get cart items with quantities
 $cart_items = [];
-$cart_product_ids = array_count_values($_SESSION['cart']);
-
-foreach ($cart_product_ids as $product_id => $quantity) {
-    foreach ($products as $product) {
-        if ($product['id'] === $product_id) {
-            $cart_items[] = [
-                'product' => array_merge($product, ['image' => $product['image']]),
-                'quantity' => $quantity,
-                'subtotal' => $product['price'] * $quantity
-            ];
-            break;
-        }
-    }
+foreach ($db_items as $item) {
+    $cart_items[] = [
+        'product' => ['id' => $item['product_id'], 'name' => $item['product_name'], 'price' => $item['price'], 'image' => $item['image_path'] ?: $item['image']],
+        'quantity' => $item['quantity'],
+        'subtotal' => $item['subtotal']
+    ];
 }
 
-// Calculate subtotal
-$subtotal = 0;
-foreach ($cart_items as $item) {
-    $subtotal += $item['subtotal'];
-}
-
-// Shipping options with dynamic cost calculation (Phase 4 Rules)
+// Shipping options logic preserved
 $shipping_options = [
-    'standard' => [
-        'id' => 1,
-        'name' => 'Standard Shipping', 
-        'cost' => 40,
-        'delivery' => 'Flat ₹40 ',
-        'icon' => '🚚'
-    ],
-    'express' => [
-        'id' => 2,
-        'name' => 'Express Shipping', 
-        'cost' => min(80, $subtotal * 0.10),
-        'delivery' => 'Flat ₹80 OR 10% of subtotal (whichever is lower) ',
-        'icon' => '⚡'
-    ],
-    'white_glove' => [
-        'id' => 3,
-        'name' => 'White Glove Delivery', 
-        'cost' => min(150, $subtotal * 0.05),
-        'delivery' => 'Flat ₹150 OR 5% of subtotal (whichever is lower) ',
-        'icon' => '🧤'
-    ],
-    'freight' => [
-        'id' => 4,
-        'name' => 'Freight Shipping', 
-        'cost' => min(200, $subtotal * 0.03),
-        'delivery' => '3% of subtotal OR Minimum $200',
-        'icon' => '🚢'
-    ]
+    'standard' => ['id' => 1, 'name' => 'Standard Shipping', 'cost' => 40, 'delivery' => 'Flat ₹40 ', 'icon' => '🚚'],
+    'express' => ['id' => 2, 'name' => 'Express Shipping', 'cost' => min(80, $subtotal * 0.10), 'delivery' => 'Flat ₹80 OR 10% of subtotal ', 'icon' => '⚡'],
+    'white_glove' => ['id' => 3, 'name' => 'White Glove Delivery', 'cost' => min(150, $subtotal * 0.05), 'delivery' => 'Flat ₹150 OR 5% of subtotal ', 'icon' => '🧤'],
+    'freight' => ['id' => 4, 'name' => 'Freight Shipping', 'cost' => min(200, $subtotal * 0.03), 'delivery' => '3% of subtotal OR Min $200', 'icon' => '🚢']
 ];
 
-// -------------------------------------------------------------------
-// [Phase 5] Shipping Logic: Determine Valid Shipping Methods
-// -------------------------------------------------------------------
-// Get selected shipping method (from Session or null)
 $selected_shipping = $_SESSION['shipping_method'] ?? null;
-// Retrieve Cart Type determined in cart.php (defaults to 'express' if missing)
 $cart_type = $_SESSION['cart_type'] ?? 'express';
-
-// Define valid methods per type based on business rules:
-// - Freight Cart: Only White Glove & Freight allowed
-// - Express Cart: Only Standard & Express allowed
 $valid_methods = ($cart_type === 'freight') ? ['white_glove', 'freight'] : ['standard', 'express'];
 
-// Validate shipping method against valid list. If invalid (e.g. user refreshed or session persisted invalid type), reset to default.
 if (!$selected_shipping || !in_array($selected_shipping, $valid_methods)) {
-    // Auto-select default: Standard for Express, Freight for Freight
     $selected_shipping = ($cart_type === 'freight') ? 'freight' : 'standard';
     $_SESSION['shipping_method'] = $selected_shipping;
 }
 
-// Calculate shipping cost based on the VALID selected method
 $shipping = $shipping_options[$selected_shipping]['cost'];
-
-// Calculate total quantity for discount
-$total_quantity = 0;
-foreach ($cart_items as $item) {
-    $total_quantity += $item['quantity'];
-}
-
-// Calculate discount if quantity is even
 $discount = 0;
 $discount_percentage = 0;
 if ($total_quantity > 0 && $total_quantity % 2 === 0) {
-    $discount_percentage = min($total_quantity, 50);   // max 50% discount
+    $discount_percentage = min($total_quantity, 50);
     $discount = ($subtotal * $discount_percentage) / 100;
 }
+$tax = (($subtotal - $discount) + $shipping) * 0.18;
+$total = ($subtotal - $discount) + $shipping + $tax;
 
-// Calculate Tax (18% on Subtotal - Discount + Shipping)
-$taxable_amount = ($subtotal - $discount) + $shipping;
-$tax = $taxable_amount * 0.18;
-
-// Calculate Final Total
-$total = $taxable_amount + $tax;
-
-// Include view
 include 'views/checkout.view.php';
 ?>

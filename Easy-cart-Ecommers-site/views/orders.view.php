@@ -28,19 +28,19 @@
         <?php if (count($my_orders) > 0): ?>
         <?php foreach ($my_orders as $order): ?>
         <div class="card" style="margin-bottom: 2rem;">
-            <div
-                style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 1rem;">
+            <!-- Order Header / Summary -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
                 <div>
-                    <h3 style="margin-bottom: 0.25rem;">Order #
-                        <?php echo htmlspecialchars($order['order_id']); ?>
-                    </h3>
+                    <h3 style="margin-bottom: 0.25rem;">Order #<?php echo htmlspecialchars($order['order_id']); ?></h3>
+                    <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.25rem;">
+                        Placed on <?php echo date('F j, Y', strtotime($order['date'])); ?>
+                    </p>
                     <p style="color: var(--text-secondary); font-size: 0.875rem;">
-                        Placed on
-                        <?php echo date('F j, Y', strtotime($order['date'])); ?>
+                        Shipping: <strong><?php echo htmlspecialchars($order['shipping_type']); ?></strong>
                     </p>
                 </div>
-                <div
-                    style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
+                
+                <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
                     <!-- Status Badge -->
                     <span style="padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.875rem; font-weight: 600; display: inline-block;
                                 <?php 
@@ -60,140 +60,111 @@
 
                     <!-- Total -->
                     <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
-                        Total: <span style="color: var(--accent);">₹
-                            <?php echo number_format($order['total']); ?>
-                        </span>
+                        Total: <span style="color: var(--accent);">₹<?php echo number_format($order['total']); ?></span>
                     </div>
 
-                    <!-- Actions -->
-                    <?php if ($status === 'Processing'): ?>
-                    <form method="POST" onsubmit="return confirm('Are you sure you want to cancel this order?');">
-                        <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
-                        <button type="submit" name="cancel_order" class="btn btn-secondary"
-                            style="padding: 0.25rem 0.75rem; font-size: 0.8rem; color: var(--error); border-color: var(--error);">
-                            Cancel Order
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button type="button" class="btn btn-primary" 
+                                onclick="toggleOrderDetails('details-<?php echo $order['order_id']; ?>')"
+                                style="padding: 0.25rem 0.75rem; font-size: 0.8rem; background: var(--accent); color: white;">
+                            View Details ▼
                         </button>
-                    </form>
-                    <?php elseif ($status !== 'Cancelled'): ?>
-                    <button class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.8rem;" disabled>
-                        Track Shipment
-                    </button>
-                    <?php endif; ?>
+                        
+                        <?php if ($status === 'Processing'): ?>
+                        <form method="POST" onsubmit="return confirm('Are you sure you want to cancel this order?');">
+                            <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
+                            <button type="submit" name="cancel_order" class="btn btn-secondary"
+                                style="padding: 0.25rem 0.75rem; font-size: 0.8rem; color: var(--error); border-color: var(--error);">
+                                Cancel
+                            </button>
+                        </form>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
 
-            <!-- Progress Indicator -->
-            <?php if ($status !== 'Cancelled'): ?>
-            <div style="margin: 2rem 0; padding: 1.5rem; background: var(--bg-accent); border-radius: 12px;">
-                <div class="checkout-progress" style="margin: 0;">
-                    <!-- Processing Step -->
-                    <div
-                        class="step <?php echo ($status === 'Processing' || $status === 'Shipped' || $status === 'Delivered') ? 'completed' : ''; ?>">
-                        <div class="step-number">
-                            <?php echo ($status === 'Processing' || $status === 'Shipped' || $status === 'Delivered') ? '✓' : '1'; ?>
-                        </div>
-                        <span>Processing</span>
-                    </div>
-                    <div class="step-divider"></div>
+            <!-- Hidden Details Section (Dropdown) -->
+            <div id="details-<?php echo $order['order_id']; ?>" style="display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+                
+                <!-- Items Table -->
+                <div class="table-container" style="border: none; box-shadow: none; margin-bottom: 2rem;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="text-align: left; font-size: 0.85rem; color: var(--text-secondary); border-bottom: 2px solid var(--bg-accent);">
+                                <th style="padding: 0.75rem;">Product</th>
+                                <th style="padding: 0.75rem;">Price</th>
+                                <th style="padding: 0.75rem; text-align: center;">Qty</th>
+                                <th style="padding: 0.75rem; text-align: right;">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($order['items'] as $item): ?>
+                            <tr style="border-bottom: 1px solid var(--bg-accent);">
+                                <td style="padding: 1rem 0.5rem;">
+                                    <div style="font-weight: 500; font-size: 0.9rem;"><?php echo htmlspecialchars($item['name']); ?></div>
+                                </td>
+                                <td style="padding: 1rem 0.5rem; font-size: 0.9rem;">₹<?php echo number_format($item['price']); ?></td>
+                                <td style="padding: 1rem 0.5rem; text-align: center; font-size: 0.9rem;"><?php echo $item['quantity']; ?></td>
+                                <td style="padding: 1rem 0.5rem; text-align: right; font-weight: 600; font-size: 0.9rem;">₹<?php echo number_format($item['price'] * $item['quantity']); ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
 
-                    <!-- Shipped Step -->
-                    <div
-                        class="step <?php echo ($status === 'Shipped' || $status === 'Delivered') ? 'completed' : ($status === 'Processing' ? '' : ''); ?>">
-                        <div class="step-number">
-                            <?php echo ($status === 'Shipped' || $status === 'Delivered') ? '✓' : '2'; ?>
+                <!-- Order Summary & Info -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
+                    <!-- Info -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="background: var(--bg-accent); padding: 0.75rem; border-radius: 8px;">
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Payment</div>
+                            <div style="font-weight: 600; font-size: 0.9rem; margin-top: 0.25rem;">
+                                <?php echo htmlspecialchars($order['payment_method'] ?? 'N/A'); ?>
+                            </div>
                         </div>
-                        <span>Shipped</span>
+                        <div style="background: var(--bg-accent); padding: 0.75rem; border-radius: 8px;">
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Shipping</div>
+                            <div style="font-weight: 600; font-size: 0.9rem; margin-top: 0.25rem;">
+                                <?php echo htmlspecialchars($order['shipping_type']); ?>
+                            </div>
+                        </div>
                     </div>
-                    <div class="step-divider"></div>
 
-                    <!-- Delivered Step -->
-                    <div class="step <?php echo ($status === 'Delivered') ? 'completed' : ''; ?>">
-                        <div class="step-number">
-                            <?php echo ($status === 'Delivered') ? '✓' : '3'; ?>
+                    <!-- Price Breakdown -->
+                    <div style="background: var(--bg-accent); padding: 1.25rem; border-radius: 12px; font-size: 0.9rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="color: var(--text-secondary);">Subtotal</span>
+                            <span>₹<?php echo number_format($order['subtotal']); ?></span>
                         </div>
-                        <span>Delivered</span>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="color: var(--text-secondary);">Shipping</span>
+                            <span>₹<?php echo number_format($order['shipping_amount']); ?></span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="color: var(--text-secondary);">Tax</span>
+                            <span>₹<?php echo number_format($order['tax_amount']); ?></span>
+                        </div>
+                        <div style="border-top: 1px dashed var(--border); margin: 0.75rem 0;"></div>
+                        <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.1rem; color: var(--accent);">
+                            <span>Total</span>
+                            <span>₹<?php echo number_format($order['total']); ?></span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Status Message -->
-                <div style="text-align: center; margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
-                    <?php 
-                                if ($status === 'Processing') {
-                                    echo '📦 Your order is being prepared';
-                                } elseif ($status === 'Shipped') {
-                                    echo '🚚 Your order is on the way';
-                                } elseif ($status === 'Delivered') {
-                                    echo '✅ Your order has been delivered';
-                                }
-                                ?>
-                </div>
-            </div>
-            <?php else: ?>
-            <!-- Cancelled Order Message -->
-            <div style="margin: 2rem 0; padding: 1.5rem; background: #fee2e2; border-radius: 12px; text-align: center;">
-                <div style="font-size: 2rem; margin-bottom: 0.5rem;">❌</div>
-                <div style="font-weight: 600; color: #991b1b; margin-bottom: 0.25rem;">Order Cancelled</div>
-                <div style="font-size: 0.875rem; color: #7f1d1d;">This order has been cancelled and will not be
-                    processed.</div>
-            </div>
-            <?php endif; ?>
-
-            <div class="table-container" style="border: none; box-shadow: none;">
-                <table style="width: 100%;">
-                    <thead>
-                        <tr style="background: var(--bg-accent); font-size: 0.85rem;">
-                            <th style="padding: 0.75rem;">Product</th>
-                            <th style="padding: 0.75rem;">Qty</th>
-                            <th style="padding: 0.75rem; text-align: right;">Price</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($order['items'] as $item): ?>
-                        <?php
-                                    // Find product details
-                                    $product_name = 'Unknown Product';
-                                    $product_img = '';
-                                    foreach ($products as $p) {
-                                        if ($p['id'] === $item['product_id']) {
-                                            $product_name = $p['name'];
-                                            // Fallback logic for image if needed, though session usually stores text.
-                                            // But wait, session stores items as [pid, qty, price]. 
-                                            // We need to look up details again or store them.
-                                            // Storing just IDs logic above.
-                                            $product_img = $p['image']; // Or gallery logic if we wanted dynamic
-                                            break;
-                                        }
-                                    }
-                                    ?>
-                        <tr>
-                            <td style="padding: 0.75rem;">
-                                <div style="display: flex; align-items: center; gap: 1rem;">
-                                    <div
-                                        style="width: 40px; height: 40px; background: #f4f4f5; border-radius: 4px; overflow: hidden; flex-shrink: 0;">
-                                        <?php if($product_img): ?>
-                                        <img src="<?php echo htmlspecialchars($product_img); ?>" alt=""
-                                            style="width: 100%; height: 100%; object-fit: cover;">
-                                        <?php endif; ?>
-                                    </div>
-                                    <span style="font-weight: 500; font-size: 0.9rem;">
-                                        <?php echo htmlspecialchars($product_name); ?>
-                                    </span>
-                                </div>
-                            </td>
-                            <td style="padding: 0.75rem; font-size: 0.9rem;">
-                                <?php echo $item['quantity']; ?>
-                            </td>
-                            <td style="padding: 0.75rem; text-align: right; font-weight: 500; font-size: 0.9rem;">
-                                ₹
-                                <?php echo number_format($item['price']); ?>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
             </div>
         </div>
         <?php endforeach; ?>
+        <script>
+        function toggleOrderDetails(id) {
+            const el = document.getElementById(id);
+            if (el.style.display === 'none') {
+                el.style.display = 'block';
+            } else {
+                el.style.display = 'none';
+            }
+        }
+        </script>
         <?php else: ?>
         <div class="card"
             style="text-align: center; padding: 4rem 2rem; border: 2px dashed var(--border); background: transparent;">

@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const subtotalElement = document.getElementById('subtotal-value'); // Subtotal value
     const shippingElement = document.getElementById('shipping-value'); // Shipping value
     const totalElement = document.getElementById('total-value'); // Total value
+    const completeOrderBtn = document.getElementById('complete-order-btn');
 
     if (shippingForm && subtotalElement && shippingElement && totalElement) {
 
@@ -44,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Visual feedback
                     if (totalElement) totalElement.style.opacity = '0.5';
 
-                    fetch('checkout.php', {
+                    fetch('checkout', {
                         method: 'POST',
                         body: formData
                     })
@@ -112,5 +113,85 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Initial check (usually none selected by default, or maybe one)
         updatePaymentHighlight();
+    }
+
+    // --- Complete Order Logic (Added for Task 1, 2, 3) ---
+    if (completeOrderBtn) {
+        completeOrderBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+
+            // 1. Gather Data
+            const formData = new FormData();
+            formData.append('ajax_place_order', '1');
+
+            // Shipping Method
+            const selectedShipping = document.querySelector('input[name="shipping_method"]:checked');
+            if (selectedShipping) {
+                formData.append('selectedMethod', selectedShipping.value);
+            }
+
+            // Payment Method
+            const selectedPayment = document.querySelector('input[name="payment_method"]:checked');
+            if (selectedPayment) {
+                formData.append('payment_method', selectedPayment.value);
+            } else {
+                alert('Please select a payment method');
+                return;
+            }
+
+            // Contact/Address Data (Manually selecting inputs since they might not be in a single <form>)
+            const fields = ['email', 'firstname', 'lastname', 'street', 'city', 'postcode', 'telephone'];
+            let valid = true;
+            fields.forEach(field => {
+                const input = document.querySelector(`input[name="${field}"]`);
+                if (input) {
+                    if (input.hasAttribute('required') && !input.value.trim()) {
+                        valid = false;
+                        input.style.borderColor = 'red';
+                    } else {
+                        input.style.borderColor = '';
+                    }
+                    formData.append(field, input.value.trim());
+                }
+            });
+
+            if (!valid) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            // 2. Send AJAX Request
+            completeOrderBtn.disabled = true;
+            completeOrderBtn.textContent = 'Processing...';
+
+            fetch('checkout', {
+                method: 'POST',
+                body: formData
+            })
+                .then(async res => {
+                    const text = await res.text();
+                    try {
+                        const data = JSON.parse(text);
+                        if (data.success) {
+                            window.location.href = data.redirect;
+                        } else {
+                            alert('Order Error: ' + data.message);
+                            completeOrderBtn.disabled = false;
+                            completeOrderBtn.textContent = 'Complete Order';
+                        }
+                    } catch (e) {
+                        console.error('Server Error:', text);
+                        alert('Server did not return valid JSON. Check console for details.');
+                        completeOrderBtn.disabled = false;
+                        completeOrderBtn.textContent = 'Complete Order';
+                    }
+                })
+                .catch(err => {
+                    // console.error(err);
+                    // alert('Network Error: ' + (err.message || 'An error occurred'));
+                    // completeOrderBtn.disabled = false;
+                    completeOrderBtn.textContent = 'Complete Order';
+                });
+        });
     }
 });

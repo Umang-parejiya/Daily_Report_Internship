@@ -9,7 +9,7 @@
             <h1 class="section-title">Your Shopping Cart</h1>
             <p class="section-subtitle">
                 You have
-                <?php echo count($_SESSION['cart']); ?> item(s) in your cart
+                <?php echo (int)$total_quantity; ?> item(s) in your cart
             </p>
         </div>
 
@@ -123,15 +123,15 @@
                                 </tr>
                                 <!-- Calculate total quantity discount even logic -->
                                 <?php if ($discount > 0): ?>
-                                <tr>
+                                <tr data-discount-row="true">
                                     <td style="padding: 0.5rem 0; border: none; color: var(--success);">
                                         Discount (
-                                        <?php echo $discount_percentage; ?>% off based on even quantity)
+                                        <span class="discount-percentage"><?php echo $discount_percentage; ?></span>% off based on even quantity)
                                     </td>
                                     <td
                                         style="padding: 0.5rem 0; border: none; text-align: right; font-weight: 600; color: var(--success);">
                                         -₹
-                                        <?php echo number_format($discount); ?>
+                                        <span class="discount-amount"><?php echo number_format($discount); ?></span>
                                     </td>
                                 </tr>
                                 <?php endif; ?>

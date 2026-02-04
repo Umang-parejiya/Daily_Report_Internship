@@ -1,5 +1,6 @@
 <?php
 // Product Listing Page - plp.php
+require_once 'config/session.php';
 $current_page = 'products';
 $page_title = 'Easy-Cart - All Products';
 
