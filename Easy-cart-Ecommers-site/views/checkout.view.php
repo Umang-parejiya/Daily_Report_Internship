@@ -30,7 +30,7 @@
 
                 <!-- Contact & Address Form -->
                 <div class="card mb-4" style="border: none; padding: 0; background: transparent; box-shadow: none;">
-                    <form class="form-fieldset" style="margin-top: 0;">
+                    <form class="form-fieldset" id="addressForm" style="margin-top: 0;">
                         <h3>Contact Details</h3>
                         <div class="checkout-form-grid">
                             <div class="form-group full-width">

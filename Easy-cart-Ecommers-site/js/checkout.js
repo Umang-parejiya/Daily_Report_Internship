@@ -140,23 +140,26 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             // Contact/Address Data (Manually selecting inputs since they might not be in a single <form>)
-            const fields = ['email', 'firstname', 'lastname', 'street', 'city', 'region', 'postcode', 'telephone'];
+           // Contact/Address Data
+            const fields = ['email','firstname','lastname','street','city','region','postcode','telephone'];
             let valid = true;
+
             fields.forEach(field => {
-                const input = document.querySelector(`input[name="${field}"]`);
-                if (input) {
-                    if (input.hasAttribute('required') && !input.value.trim()) {
-                        valid = false;
-                        input.style.borderColor = 'red';
-                    } else {
-                        input.style.borderColor = '';
-                    }
+                const input = document.querySelector('#addressForm [name="'+field+'"]');
+
+                console.log(field, input ? input.value : 'NOT FOUND');
+
+                if (!input || input.value.trim() === '') {
+                    valid = false;
+                    if (input) input.style.borderColor = 'red';
+                } else {
+                    input.style.borderColor = '';   
                     formData.append(field, input.value.trim());
                 }
             });
 
             if (!valid) {
-                alert('Please fill in all required fields.');
+                alert("Please fill all address fields");
                 return;
             }
 
@@ -164,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function () {
             completeOrderBtn.disabled = true;
             completeOrderBtn.textContent = 'Processing...';
 
-            fetch('checkout.php', {
+            fetch('checkout', {
                 method: 'POST',
                 body: formData
             })
@@ -187,9 +190,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 })
                 .catch(err => {
-                    // console.error(err);
-                    // alert('Network Error: ' + (err.message || 'An error occurred'));
-                    // completeOrderBtn.disabled = false;
+                     console.error(err);
+                    completeOrderBtn.disabled = false;
                     completeOrderBtn.textContent = 'Complete Order';
                 });
         });
