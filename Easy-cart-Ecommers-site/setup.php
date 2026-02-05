@@ -34,6 +34,23 @@ foreach ($sql_files as $file) {
     echo "<hr>";
 }
 
+// Additional Schema Updates (from migrate_status.php)
+echo "<h3>Processing: Schema Updates</h3>";
+$tables = ['sales_cart_items', 'cart_items'];
+foreach ($tables as $table) {
+    try {
+        $pdo->exec("ALTER TABLE $table ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active'");
+        echo "<p style='color: green;'><strong>✓ Success:</strong> Added/Verified 'status' column in $table.</p>";
+    } catch (PDOException $e) {
+        if ($e->getCode() == '42P01') {
+             echo "<p style='color: orange;'><strong>⚠ Warning:</strong> Table $table does not exist, skipping.</p>";
+        } else {
+             echo "<p style='color: red;'><strong>✗ Error:</strong> Error updating $table: " . htmlspecialchars($e->getMessage()) . "</p>";
+        }
+    }
+}
+echo "<hr>";
+
 echo "<p>Setup completed.</p>";
 echo "<a href='index.php'>Go to Home Page</a>";
 ?>

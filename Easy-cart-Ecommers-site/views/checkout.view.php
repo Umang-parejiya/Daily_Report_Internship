@@ -54,6 +54,10 @@
                                 <input type="text" name="city" class="form-input" placeholder="New York" required>
                             </div>
                             <div class="form-group">
+                                <label class="form-label">Region/State</label>
+                                <input type="text" name="region" class="form-input" placeholder="NY" required>
+                            </div>
+                            <div class="form-group">
                                 <label class="form-label">Postal Code</label>
                                 <input type="text" name="postcode" class="form-input" placeholder="10001" required>
                             </div>

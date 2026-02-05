@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             // Contact/Address Data (Manually selecting inputs since they might not be in a single <form>)
-            const fields = ['email', 'firstname', 'lastname', 'street', 'city', 'postcode', 'telephone'];
+            const fields = ['email', 'firstname', 'lastname', 'street', 'city', 'region', 'postcode', 'telephone'];
             let valid = true;
             fields.forEach(field => {
                 const input = document.querySelector(`input[name="${field}"]`);
@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function () {
             completeOrderBtn.disabled = true;
             completeOrderBtn.textContent = 'Processing...';
 
-            fetch('checkout', {
+            fetch('checkout.php', {
                 method: 'POST',
                 body: formData
             })

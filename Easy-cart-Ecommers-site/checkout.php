@@ -1,4 +1,6 @@
 <?php
+ini_set('display_errors',1);
+error_reporting(E_ALL);
 /**
  * checkout.php
  * Overhauled to use official sales_order tables and soft-deactivate cart items.
@@ -87,6 +89,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_update_shipping'
 
 // Handle Order Creation (AJAX)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_place_order'])) {
+    // Start output buffering
+    ob_start();
     header('Content-Type: application/json');
     
     try {
@@ -112,6 +116,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_place_order'])) 
         }
 
         // 2. Re-calculate everything to be sure
+        
+        // [FIX] Always calculate subtotal from database
+        $stmtFresh = $pdo->prepare("SELECT SUM(subtotal) FROM sales_cart_items WHERE cart_id = ? AND status = 'active'");
+        $stmtFresh->execute([$cartId]);
+        $db_subtotal = $stmtFresh->fetchColumn();
+
+        // Validate Subtotal
+        $subtotal = floatval($db_subtotal); // Ensure it's a number (0 if null)
+        
+        if ($subtotal <= 0) {
+            throw new Exception("Cart appears to be empty (Subtotal is 0 or NULL).");
+        }
+
         $discount = 0;
         if ($total_quantity > 0 && $total_quantity % 2 === 0) {
             $discount_percentage = min($total_quantity, 50);
@@ -119,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_place_order'])) 
         }
 
         $shipping_cost = isset($_POST['shipping_cost']) ? floatval($_POST['shipping_cost']) : 0;
-        $order_subtotal = $subtotal; // Use original subtotal before discount
+        $order_subtotal = $subtotal; 
         $taxable = ($order_subtotal - $discount);
         $tax = ($taxable + $shipping_cost) * 0.18;
         $final_total = $taxable + $tax + $shipping_cost;
@@ -127,25 +144,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_place_order'])) 
         // Generate a friendly increment ID
         $increment_id = '1000' . mt_rand(10, 99) . mt_rand(100, 999);
 
-        // 2.1 Get and Sanitize Input
+        // 2.1 Read POST Data (Task: Ensure PHP receives address values)
         $payment_method = $_POST['payment_method'] ?? 'card';
-        $email = $_POST['email'] ?? $user['email'];
-        $fname = $_POST['firstname'] ?? $user['first_name'];
-        $lname = $_POST['lastname'] ?? $user['last_name'];
-        $street = $_POST['street'] ?? '';
-        $city = $_POST['city'] ?? '';
-        $postcode = $_POST['postcode'] ?? '';
-        $phone = $_POST['telephone'] ?? '';
+        // Debugging: Log the received POST data to PHP error log
+        error_log("Checkout POST Data: " . print_r($_POST, true));
         
-        // 2.2 Insert Address (sales_cart_address)
-        $stmtAddress = $pdo->prepare("
-            INSERT INTO sales_cart_address (
-                cart_id, address_type, firstname, lastname, email, street, city, postcode, telephone
-            ) VALUES (?, 'shipping', ?, ?, ?, ?, ?, ?, ?)
-        ");
-        $stmtAddress->execute([$cartId, $fname, $lname, $email, $street, $city, $postcode, $phone]);
+        // Priority: POST data -> Fallback: Database session user (for email/name) -> Default: empty
+        $lastname   = trim($_POST['lastname'] ?? $user['last_name'] ?? '');
+        $firstname  = trim($_POST['firstname'] ?? $user['first_name'] ?? '');
+        $email      = trim($_POST['email'] ?? $user['email'] ?? '');
+        $street     = trim($_POST['street'] ?? '');
+        $city       = trim($_POST['city'] ?? '');
+        $region     = trim($_POST['region'] ?? '');
+        $postcode   = trim($_POST['postcode'] ?? '');
+        $telephone  = trim($_POST['telephone'] ?? '');
 
-        // 2.3 Insert Shipping Method (sales_cart_shipping)
+        // 2.2 Insert Address (sales_cart_address)
+        // User requested named parameters
+        $sqlAddress = "INSERT INTO sales_cart_address
+        (cart_id, address_type, firstname, lastname, email, street, city, region, postcode, telephone)
+        VALUES
+        (:cart_id, :address_type, :firstname, :lastname, :email, :street, :city, :region, :postcode, :telephone)";
+        
+        $stmtAddress = $pdo->prepare($sqlAddress);
+        $stmtAddress->execute([
+            ':cart_id'      => $cartId,
+            ':address_type' => 'shipping',
+            ':firstname'    => $firstname,
+            ':lastname'     => $lastname,
+            ':email'        => $email,
+            ':street'       => $street,
+            ':city'         => $city,
+            ':region'       => $region,
+            ':postcode'     => $postcode,
+            ':telephone'    => $telephone
+        ]);
+
+        // Updated variables for sales_order to use captured values
+        $fname = $firstname;
+        $lname = $lastname;
+        $phone = $telephone;
+
+        // 2.3 Insert Shipping Method...
         $stmtShippingInsert = $pdo->prepare("
             INSERT INTO sales_cart_shipping (
                 cart_id, method_code, amount
@@ -219,9 +259,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_place_order'])) 
         unset($_SESSION['cart_type']);
 
         $pdo->commit();
+        ob_end_clean();
         echo json_encode(['success' => true, 'order_id' => $order_id, 'redirect' => 'orders']);
     } catch (Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
+        ob_end_clean();
         echo json_encode(['success' => false, 'message' => 'Order failed: ' . $e->getMessage()]);
     }
     exit;

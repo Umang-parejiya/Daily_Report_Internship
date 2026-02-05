@@ -17,6 +17,7 @@
                         <li><a href="plp.php" class="nav-link <?php echo ($current_page == 'products') ? 'active' : ''; ?>">Products</a></li>
                         <li><a href="cart.php" class="nav-link <?php echo ($current_page == 'cart') ? 'active' : ''; ?>">Cart</a></li>
                         <?php if (isset($_SESSION['user_id'])): ?>
+                            <li><a href="dashboard.php" class="nav-link <?php echo ($current_page == 'dashboard') ? 'active' : ''; ?>">Dashboard</a></li>
                             <li><a href="logout.php" class="nav-link">Logout</a></li>
                         <?php else: ?>
                             <li><a href="login.php" class="nav-link <?php echo ($current_page == 'login') ? 'active' : ''; ?>">Login</a></li>
