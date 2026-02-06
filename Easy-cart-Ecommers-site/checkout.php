@@ -135,7 +135,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_place_order'])) 
             $discount = ($subtotal * $discount_percentage) / 100;
         }
 
-        $shipping_cost = isset($_POST['shipping_cost']) ? floatval($_POST['shipping_cost']) : 0;
+        // Calculate Shipping Cost based on selected method
+        $shipping_cost = 0;
+        switch($method) {
+            case 'standard': $shipping_cost = 40; break;
+            case 'express': $shipping_cost = min(80, $subtotal * 0.10); break;
+            case 'white_glove': $shipping_cost = min(150, $subtotal * 0.05); break;
+            case 'freight': $shipping_cost = min(200, $subtotal * 0.03); break;
+        }
+
         $order_subtotal = $subtotal; 
         $taxable = ($order_subtotal - $discount);
         $tax = ($taxable + $shipping_cost) * 0.18;
@@ -158,6 +166,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_place_order'])) 
         $region     = trim($_POST['region'] ?? '');
         $postcode   = trim($_POST['postcode'] ?? '');
         $telephone  = trim($_POST['telephone'] ?? '');
+
+        // [Validation] Ensure address is actively present (fix for partial storage)
+        // if (empty($street) || empty($city) || empty($postcode)) {
+        //     throw new Exception("Incomplete Address: Street, City, and Postal Code are required.");
+        // }
 
         // 2.2 Insert Address (sales_cart_address)
         // User requested named parameters

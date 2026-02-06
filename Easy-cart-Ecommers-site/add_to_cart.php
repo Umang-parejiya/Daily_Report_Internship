@@ -58,6 +58,7 @@ function handleAddToCart($pdo, $productId, $quantity = 1) {
         $cartId = $pdo->lastInsertId();
     }
 
+
     // 4. Insert Into Cart Items / Handle Duplicates
     $stmtCheckItem = $pdo->prepare("SELECT item_id, quantity FROM sales_cart_items WHERE cart_id = ? AND product_id = ? AND status = 'active'");
     $stmtCheckItem->execute([$cartId, $productId]);
@@ -90,6 +91,21 @@ function handleAddToCart($pdo, $productId, $quantity = 1) {
             $attributeJson, 
             $subtotal
         ]);
+    }
+
+    // 5. Store in Session for Guest Users
+    if (!$userId && $guestUserId) {
+        // Initialize session cart if not exists
+        if (!isset($_SESSION['cart'])) {
+            $_SESSION['cart'] = [];
+        }
+        
+        // Update session cart with product_id and quantity
+        if (isset($_SESSION['cart'][$productId])) {
+            $_SESSION['cart'][$productId] += $quantity;
+        } else {
+            $_SESSION['cart'][$productId] = $quantity;
+        }
     }
 
     // Get total items count for the cart

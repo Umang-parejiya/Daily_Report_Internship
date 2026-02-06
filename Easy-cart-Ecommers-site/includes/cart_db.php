@@ -12,6 +12,55 @@ require_once __DIR__ . '/../config/db.php';
 function merge_guest_cart_to_user($guest_user_id, $user_id) {
     global $pdo;
 
+    // 0. Handle Session Cart (if exists)
+    if (isset($_SESSION['cart']) && !empty($_SESSION['cart'])) {
+        // Find or create guest cart in database
+        $stmtGuestCart = $pdo->prepare("SELECT cart_id FROM sales_cart WHERE guest_user_id = ? ORDER BY created_at DESC LIMIT 1");
+        $stmtGuestCart->execute([$guest_user_id]);
+        $guestCartId = $stmtGuestCart->fetchColumn();
+        
+        if (!$guestCartId) {
+            // Create guest cart if it doesn't exist
+            $stmtNewCart = $pdo->prepare("INSERT INTO sales_cart (user_id, guest_user_id) VALUES (NULL, ?)");
+            $stmtNewCart->execute([$guest_user_id]);
+            $guestCartId = $pdo->lastInsertId();
+        }
+        
+        // Migrate session cart items to database
+        foreach ($_SESSION['cart'] as $productId => $qty) {
+            // Fetch product details
+            $stmtProduct = $pdo->prepare("SELECT * FROM catalog_product_entity WHERE entity_id = ?");
+            $stmtProduct->execute([$productId]);
+            $product = $stmtProduct->fetch();
+            
+            if ($product) {
+                // Check if item already exists in database cart
+                $stmtCheck = $pdo->prepare("SELECT item_id, quantity FROM sales_cart_items WHERE cart_id = ? AND product_id = ? AND status = 'active'");
+                $stmtCheck->execute([$guestCartId, $productId]);
+                $existing = $stmtCheck->fetch();
+                
+                if ($existing) {
+                    // Update quantity
+                    $newQty = $existing['quantity'] + $qty;
+                    $newSubtotal = $product['price'] * $newQty;
+                    $pdo->prepare("UPDATE sales_cart_items SET quantity = ?, subtotal = ? WHERE item_id = ?")->execute([$newQty, $newSubtotal, $existing['item_id']]);
+                } else {
+                    // Insert new item
+                    $subtotal = $product['price'] * $qty;
+                    $stmtInsert = $pdo->prepare("
+                        INSERT INTO sales_cart_items (
+                            cart_id, product_id, product_name, price, quantity, subtotal, status
+                        ) VALUES (?, ?, ?, ?, ?, ?, 'active')
+                    ");
+                    $stmtInsert->execute([$guestCartId, $productId, $product['name'], $product['price'], $qty, $subtotal]);
+                }
+            }
+        }
+        
+        // Clear session cart after migration
+        unset($_SESSION['cart']);
+    }
+
     // 1. Find Guest Cart
     $stmtGuest = $pdo->prepare("SELECT cart_id FROM sales_cart WHERE guest_user_id = ? ORDER BY created_at DESC LIMIT 1");
     $stmtGuest->execute([$guest_user_id]);

@@ -139,27 +139,38 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            // Contact/Address Data (Manually selecting inputs since they might not be in a single <form>)
-           // Contact/Address Data
-            const fields = ['email','firstname','lastname','street','city','region','postcode','telephone'];
+            // Contact/Address Data
+            // [FIX] Explicitly select inputs from the form by ID to guarantee we get the user's input
+            const addressForm = document.getElementById('addressForm');
+            const fields = ['email', 'firstname', 'lastname', 'street', 'city', 'region', 'postcode', 'telephone'];
+
+            if (!addressForm) {
+                alert('Critical: Address form not found.');
+                return;
+            }
+
             let valid = true;
-
             fields.forEach(field => {
-                const input = document.querySelector('#addressForm [name="'+field+'"]');
-
-                console.log(field, input ? input.value : 'NOT FOUND');
-
-                if (!input || input.value.trim() === '') {
-                    valid = false;
-                    if (input) input.style.borderColor = 'red';
+                // Look strictly inside #addressForm
+                const input = addressForm.querySelector(`input[name="${field}"]`);
+                if (input) {
+                    const val = input.value.trim();
+                    if (input.hasAttribute('required') && !val) {
+                        input.style.borderColor = 'red';
+                        valid = false;
+                    } else {
+                        input.style.borderColor = '';
+                    }
+                    formData.append(field, val);
                 } else {
-                    input.style.borderColor = '';   
-                    formData.append(field, input.value.trim());
+                    console.warn(`Field ${field} not found in addressForm`);
                 }
             });
 
             if (!valid) {
-                alert("Please fill all address fields");
+                alert("Please fill in all required address fields.");
+                completeOrderBtn.disabled = false;
+                completeOrderBtn.textContent = 'Complete Order';
                 return;
             }
 
@@ -190,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 })
                 .catch(err => {
-                     console.error(err);
+                    console.error(err);
                     completeOrderBtn.disabled = false;
                     completeOrderBtn.textContent = 'Complete Order';
                 });
